@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Город с нуля</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#f1e8d4;--card:#fbf6e9;--ink:#25303a;--green:#2f6f5e;--gold:#e6a82c;--red:#c4513f;--mute:#6b7280;--grass:#9cc48a}
+@media(prefers-color-scheme:dark){:root{--bg:#1f2a2e;--card:#2a373c;--ink:#f1e8d4;--green:#5fb39a;--gold:#e6a82c;--red:#e07a66;--mute:#9aa7ab;--grass:#3d5f45}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 "Trebuchet MS",system-ui,sans-serif}
+#app{max-width:520px;margin:0 auto;padding:12px 12px calc(86px + env(safe-area-inset-bottom,0px));padding-top:calc(12px + env(safe-area-inset-top,0px))}
+.pill,.card,button{border:2.5px solid var(--ink);border-radius:16px;background:var(--card);color:var(--ink)}
+.top{display:flex;gap:8px;align-items:stretch;margin-bottom:10px}
+.pill{padding:7px 12px;font-weight:700}
+.money{flex:1;text-align:right;font-size:19px;background:var(--card)}
+.money small{display:block;font-size:11px;font-weight:600;color:var(--mute)}
+.day{background:var(--ink);color:var(--bg)}
+.card{padding:12px;margin-bottom:10px}
+h2{margin:0 0 6px;font-size:17px}
+.bar{height:12px;border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--bg);margin:4px 0}
+.bar i{display:block;height:100%;background:var(--green)}
+.row{display:flex;justify-content:space-between;gap:8px;padding:3px 0}
+.mute{color:var(--mute);font-size:13px}
+.good{color:var(--green);font-weight:700}.bad{color:var(--red);font-weight:700}
+button{font:inherit;font-weight:700;padding:11px 12px;cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+button:active{transform:translateY(3px);box-shadow:none}
+button:disabled{opacity:.45}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.main{width:100%;background:var(--gold);color:#25303a;font-size:18px;padding:14px;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.item{text-align:left;display:flex;flex-direction:column;gap:2px}
+.item span{font-weight:400;font-size:12px;color:var(--mute)}
+.item.lock{opacity:.5}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:2.5px solid var(--ink);padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;justify-content:center;z-index:6}
+.nav button{flex:1;max-width:96px;padding:6px 2px;font-size:11px;line-height:1.2;box-shadow:none;border-radius:12px}
+.nav button em{display:block;font-style:normal;font-size:20px}
+.nav button.on{background:var(--gold);color:#25303a}
+.tax{display:flex;gap:6px}.tax button{flex:1;padding:9px 0}
+.tax .on{background:var(--green);color:#fff}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:8}
+.sheet .card{width:100%;max-width:520px;margin:0;border-radius:22px 22px 0 0;padding:16px 14px calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet button{width:100%;margin-top:8px}
+.toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:14px;font-weight:700;z-index:9;max-width:90%;text-align:center}
+.note{white-space:pre-line}
+.hist{display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:6px}
+.hist i{flex:1;border:2px solid var(--ink);border-radius:5px 5px 0 0;background:var(--green)}
+.hist i.n{background:var(--red)}
+#app{padding-top:0}
+.hud{position:sticky;top:0;z-index:4;background:var(--bg);margin:0 -12px 10px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 6px}
+.hud .top{margin-bottom:6px}.hud .bar{margin:6px 0 0;height:8px}.hud .bar i{background:var(--gold)}
+.spd{display:flex;gap:6px;align-items:center}
+.spd button{padding:6px 0;flex:1;max-width:58px;box-shadow:none;border-radius:12px}
+.spd button.on{background:var(--ink);color:var(--bg)}
+.art{border:2.5px solid var(--ink);border-radius:20px;overflow:hidden;margin-bottom:10px;line-height:0;background:#8fcdf0;position:relative;box-shadow:0 4px 0 rgba(37,48,58,.15)}
+.art svg{width:100%;height:auto;display:block}
+.w{fill:var(--win);stroke-width:.8}
+.big{font-size:24px;font-weight:700;margin:2px 0}
+.pp{animation:walk linear infinite}.car{animation:drive linear infinite}.cl{animation:drift linear infinite}.smoke{animation:puff 3s ease-out infinite}
+@keyframes walk{from{transform:translateX(-10px)}to{transform:translateX(370px)}}
+@keyframes drive{from{transform:translateX(-40px)}to{transform:translateX(390px)}}
+@keyframes drift{from{transform:translateX(-60px)}to{transform:translateX(420px)}}
+@keyframes puff{from{transform:translateY(0);opacity:.9}to{transform:translateY(-14px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.pp,.car,.cl,.smoke{animation:none}}
+.hud .bl{box-shadow:none;font-size:13px;padding:7px 10px}
+.ctl{display:flex;gap:8px;align-items:stretch;margin-bottom:6px}
+.ctl .main{flex:1;margin:0;width:auto}.main:disabled{opacity:1}
+.main.run{background:linear-gradient(90deg,var(--green) var(--p,0%),#d8cfb8 var(--p,0%));color:#fff}
+.ctl .spd{flex:none}.ctl .spd button{flex:none;width:46px;padding:0}
+.chk{display:flex;gap:8px;align-items:center;margin:0 2px 10px;font-size:13px}.chk input{width:20px;height:20px;accent-color:var(--green)}
+#bl{position:absolute;inset:0;pointer-events:none}
+.live{position:absolute;left:10px;bottom:10px;background:rgba(37,48,58,.88);backdrop-filter:blur(4px);color:#fbf6e9;border-radius:12px;padding:5px 10px;font:700 12px/1.2 "Trebuchet MS",system-ui,sans-serif;border:1.5px solid rgba(255,255,255,.15)}
+.bub{position:absolute;pointer-events:auto;line-height:1.2;padding:6px 10px;font-size:14px;background:var(--gold);color:#25303a;box-shadow:0 3px 0 var(--ink);border-radius:20px;animation:bub 3.6s linear forwards}
+@keyframes bub{0%{transform:translateY(8px) scale(.4);opacity:0}8%{transform:translateY(0) scale(1);opacity:1}85%{opacity:1}100%{transform:translateY(-22px);opacity:0}}
+.idle *{animation-play-state:paused}.glow{opacity:var(--gl,0)}
+.pp,.car{animation-duration:calc(var(--d,20s) / var(--sp,1))}
+.tot{border-top:2px solid var(--ink);margin-top:4px;padding-top:6px;font-size:17px}
+.top{flex-wrap:wrap}.top .pill{padding:6px 10px;font-size:13px;white-space:nowrap}.top .day,.top .bl{flex:1 1 0;text-align:center}.top .money{order:3;flex:1 1 100%;text-align:center;font-size:20px}.top .money small{font-size:11px}.ef{display:block;font-size:12px;font-weight:400;opacity:.8;margin-top:3px}
+.cmv{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:rgba(37,48,58,.72);backdrop-filter:blur(4px);color:#fff;border:1.5px solid rgba(255,255,255,.25);font-size:14px;padding:0;line-height:30px;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.cmv:active{transform:translateY(-50%) scale(.92)}
+.cmn{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(37,48,58,.82);backdrop-filter:blur(4px);color:#fff;padding:3px 12px;border-radius:14px;font-size:12px;font-weight:700;line-height:18px;z-index:5;white-space:nowrap;border:1.5px solid rgba(255,255,255,.2);letter-spacing:.2px}
+.art.cm #live,.art.cm #bl{display:none}
+.camb{display:flex;gap:5px;margin:0 0 8px}
+.camb button{flex:1 1 0;min-width:0;padding:7px 2px;font-size:11.5px;white-space:nowrap;border-radius:12px;box-shadow:0 2px 0 var(--ink);transition:background .15s}
+.camb button.on{background:var(--gold);color:#25303a}
+.top .money.wb{flex:1 1 calc(100% - 158px);min-width:0}.top .hday{order:3;flex:0 0 150px;background:var(--gold);color:#25303a;font-size:13px;line-height:1.2;padding:6px 8px;box-shadow:0 3px 0 var(--ink);text-align:center}.top .hday:active{transform:translateY(3px);box-shadow:none}.top .hday.run{background:linear-gradient(90deg,var(--green) var(--p,0%),#d8cfb8 var(--p,0%));color:#fff;opacity:1}</style></head><body><div id="app"></div>
+<script>
+const tg=window.Telegram&&Telegram.WebApp;
+if(tg&&tg.initData){try{tg.ready();tg.expand();}catch(e){}}
+const fmt=n=>Math.trunc(n).toLocaleString('en-US').replace(/,/g,' ');
+const sh=n=>{n=Math.trunc(n);const a=Math.abs(n);return a>=1e6?(n/1e6).toFixed(1)+' млн':a>=1e3?Math.round(n/1e3)+' тыс':''+n};
+const LV=[["🛖 Деревня",0,0],["🏘 Посёлок",100,5e5],["🏙 ПГТ",1e3,2e6],["🌆 Город",1e4,1e7],["🌇 Крупный город",1e5,5e7],["🗽 Мегаполис",1e6,3e8]];
+const B={house:["🏠","Дом",1e5,0,6,3e3,0,0,0],shop:["🛒","Магазин",3e5,0,0,0,8e3,1e3,1],park:["🌳","Парк",25e4,0,0,0,0,1e3,4],
+school:["🏫","Школа",7e5,1,0,0,0,1e4,8],clinic:["🏥","Больница",9e5,1,0,0,0,12e3,8],hotel:["🏨","Отель",25e5,1,0,0,6e4,15e3,0],
+block:["🏢","Многоэтажка",4e6,2,60,3e4,0,3e3,0],factory:["🏭","Завод",3e6,2,0,0,12e4,3e4,-6],mall:["🏬","ТРЦ",12e6,3,0,0,4e5,8e4,3],
+stadium:["🏟","Стадион",2e7,3,0,0,0,1e5,12],tower:["🌃","Небоскрёб",6e7,4,600,4e5,0,4e4,0],mine:["⛏","Шахта",2e6,2,0,0,15e4,3e4,-8],museum:["🏛","Музей",12e5,1,0,0,25e3,8e3,6],
+coffee:["☕","Своя кофейня",35e4,0,0,0,12e3,3e3,2],taxi:["🚕","Свой таксопарк",9e5,1,0,0,0,9e3,1],voc:["🛠","Училище",12e5,1,0,0,0,15e3,4],col:["📚","Колледж",3e6,2,0,0,2e4,4e4,5],uni:["🎓","Университет",9e6,3,0,0,8e4,12e4,8],depot:["🚌","Автопарк",7e5,1,0,0,0,6e3,2],cell:["📡","Вышка связи",3e5,1,0,0,0,5e3,1],bakery:["🥖","Пекарня",5e5,0,0,0,16e3,4e3,3],gym:["🏋️","Спортзал",8e5,1,0,0,2e4,7e3,5],
+night:["🌙","Ночной рынок",5e5,1,0,0,6e4,1e4,4],
+eco:["🏕","Эко-отель",4e6,2,0,0,9e4,2e4,3],fish:["🎣","Рыбалка",6e5,1,0,0,15e3,2e3,2],
+airport:["✈️","Аэропорт",2e8,5,0,0,3e6,5e5,5],mint:["🏦","Свой банк и валюта",1e9,5,0,0,5e7,2e7,3],island:["🏝","Остров-курорт",2e9,5,0,0,12e7,6e7,8],space:["🚀","Космодром",5e9,5,0,0,3e8,2e8,10]};
+Object.assign(B,{lyceum:["🎒","Лицей",16e5,1,0,0,0,18e3,10],gymn:["📖","Гимназия",35e5,2,0,0,0,3e4,12],super:["🛍","Супермаркет",12e5,1,0,0,44e3,9e3,2],cottage:["🏡","Коттедж",6e5,1,12,9e3,0,1500,0]});
+Object.assign(B,{police:["🚓","Полиция",8e5,1,0,0,0,2e4,3],firest:["🚒","Пожарная часть",7e5,1,0,0,0,15e3,2]});
+const UPG=[["house","cottage"],["shop","super"],["school","lyceum"],["lyceum","gymn"]],HID=new Set(UPG.map(u=>u[1]));
+const EV=[["💼 Инвестор хочет купить 2 участка за 400 000 ₽.",[["Продать",4e5,0,0,-2],["Отказать",0,0,0,0]]],
+["🔥 Пожар в жилом доме!",[["Оплатить пожарных (−80 000 ₽, дом цел)",-8e4,3,0,0,{b:{},t:"🔥 Пожар потушен, дом цел"}],["Сэкономить: сгорит дом (−1 дом, настроение −6)",0,-6,0,0,{b:{house:-1},t:"🔥 Дом сгорел — жильцам негде жить"}]]],
+["🎉 Жители просят устроить праздник города.",[["Устроить (−150 000 ₽)",-15e4,10,0,0],["Отказать",0,-3,0,0]]],
+["🏭 Бизнесмен хочет открыть грязное производство.",[["Разрешить (+300 000 ₽, настроение −8)",3e5,-8,0,0],["Отказать",0,2,0,0]]],
+["🧳 Блогер предлагает прорекламировать город.",[["Заплатить 50 000 ₽ (+15 жителей)",-5e4,0,15,0],["Отказать",0,0,0,0]]],
+["🚧 Главная дорога разбита.",[["Починить (−120 000 ₽)",-12e4,4,0,0],["Отложить",0,-5,0,0]]],
+["🎁 Область выделила участок под застройку.",[["Взять бесплатно",0,0,0,1],["Взять и продать (+60 000 ₽)",6e4,0,0,0]]],
+["🏫 В посёлке много детей, а школы нет.",[["Построить школу (−700 000 ₽, настроение +8)",-7e5,8,0,0,{b:{school:1}}],["Возить детей в соседний город: час езды (−30 000 ₽, настроение −4)",-3e4,-4,0,0]]],
+["⚡ Предлагают провести свет и газ на новые улицы.",[["Провести (−200 000 ₽, настроение +6, +10 жителей)",-2e5,6,10,0],["Отложить (настроение −3)",0,-3,0,0]]],
+["🌾 Фермер продаёт землю дешевле рынка.",[["Купить 2 участка (−60 000 ₽)",-6e4,0,0,2],["Отказаться",0,0,0,0]]],
+["⛰ Продают гору целиком.",[["Купить всю гору (−3 000 000 ₽, +6 участков)",-3e6,2,0,6],["Купить половину (−1 600 000 ₽, +3 участка)",-16e5,1,0,3],["Отказаться",0,0,0,0]]],
+["🏗 Застройщик: что строим на пустыре?",[["Многоэтажки (−4 000 000 ₽, +180 мест)",-4e6,0,0,0,{b:{block:3}}],["Новая улица: 10 домов (−1 000 000 ₽, +60 мест)",-1e6,2,0,0,{b:{house:10}}]]],
+["⛏ В горах нашли шахту.",[["Открыть шахту (−2 000 000 ₽, большой доход, настроение −8)",-2e6,0,0,0,{b:{mine:1},t:"⛏ Шахта открыта"}],["Построить музей (−1 200 000 ₽, небольшой доход, настроение +6)",-12e5,0,0,0,{b:{museum:1},t:"🏛 Музей построен"}],["Закрыть вход",0,0,0,0]]],
+["🔥 Газовики предлагают провести газ дешевле обычного.",[["Провести газ (−150 000 ₽, настроение +3)",-15e4,0,0,0,{u:"gas",t:"🔥 Газ проведён"}],["Отказаться",0,0,0,0]]],
+["👵 Бабушка живёт одна: без света темно, без тепла холодно. Что проводим первым?",[["⚡ Свет и проводка (−150 000 ₽)",-15e4,4,0,0,{b:{},u:"light",t:"⚡ Свет проведён — в доме горит лампа"}],["🔥 Газ: тепло зимой (−250 000 ₽)",-25e4,3,0,0,{b:{},u:"gas",t:"🔥 Газ проведён — в доме тепло, но свет ещё нужен"}]]],
+["🚒 Городу нужна техника. Что покупаем?",[["Пожарную машину (−250 000 ₽, настроение +3)",-25e4,3,0,0,{b:{},f:"truck",n:"пожаров больше не будет"}],["Скорую помощь (−300 000 ₽, настроение +6)",-3e5,6,0,0,{b:{},f:"amb"}],["Пока ничего",0,0,0,0]]],
+["🚌 Жителям тяжело добираться до работы.",[["Купить автобусы (−400 000 ₽, настроение +5, +10 жителей)",-4e5,5,10,0,{b:{},f:"bus"}],["Такси-сервис (−150 000 ₽, настроение +2)",-15e4,2,0,0,{b:{}}],["Пусть ходят пешком (настроение −4)",0,-4,0,0]]],
+["📡 В посёлке плохая связь.",[["Вышка сотовой связи (−300 000 ₽, настроение +4)",-3e5,4,0,0,{b:{},f:"cell"}],["Wi-Fi в парке (−80 000 ₽, настроение +2)",-8e4,2,0,0,{b:{}}]]],
+["🎓 В школе нужен специалист.",[["Нанять учителя (−60 000 ₽, настроение +3)",-6e4,3,0,0,{b:{},f:"teach"}],["Пригласить детского врача (−90 000 ₽, настроение +4)",-9e4,4,0,0,{b:{},f:"teach"}]]],
+["🌳 На пустыре можно сделать что-то своё.",[["Разбить парк (−250 000 ₽, настроение +6)",-25e4,6,0,-1,{b:{park:1}}],["Продать застройщику (+400 000 ₽, настроение −2)",4e5,-2,0,-1,{b:{}}]]],
+["🕵️ Приехала налоговая проверка.",[["Честно показать документы (настроение +2)",0,2,0,0,{b:{},mp:-.02}],["Договориться «по-тихому»",0,0,0,0,{b:{},mp:-.01,risk:{p:.4,m:.1,mo:-6,t:"🕵️ Не вышло: большой штраф!"}}]]],
+["☕ Бариста мечтает открыть кофейню в центре.",[["Открыть своё кофе (−350 000 ₽, настроение +3)",-35e4,3,0,0,{b:{coffee:1}}],["Не сейчас",0,0,0,0]]],
+["🚕 Таксист предлагает собрать свой таксопарк.",[["Купить 5 машин и открыть парк (−900 000 ₽)",-9e5,1,0,0,{b:{taxi:1}}],["Взять 2 машины в аренду (−120 000 ₽, настроение +1)",-12e4,1,0,0,{b:{}}],["Не сейчас",0,0,0,0]]]];
+const EVEL=EV.push(["🗳 Выборы позади. Какую программу обещаешь на следующий срок?",[["Популист: низкие налоги (−150 000 ₽, настроение +6; на выборах бонус, если налог ≤13%)",-15e4,6,0,0,{b:{}}],["Реформатор: порядок в бюджете (настроение −3, +2% казны)",0,-3,0,0,{b:{},mp:.02}]]])-1;
+const EVFEST=EV.push(["🎉 Город готовится к празднику. Устроить гуляния для жителей и туристов?",[["Устроить (−150 000 ₽, настроение +6, неделя повышенных доходов от гостей)",-15e4,6,0,0,{b:{}}],["Не в этот раз (настроение −2)",0,-2,0,0,{b:{}}]]])-1;
+const fl=k=>S.flags&&S.flags[k];
+const evOK=i=>i==EVEL||i==EVFEST?false:i==20?S.lvl>=2&&S.money>2e6:i==21?S.lvl>=1&&S.util.light&&!cnt("coffee"):i==22?S.lvl>=1&&S.util.light&&!cnt("taxi"):i==14?false:i==15?S.lvl>=1&&!fl("truck"):i==16?S.lvl>=1&&!fl("bus"):i==17?S.lvl>=1&&!fl("cell"):i==18?cnt("school")>0&&!fl("teach"):i==19?S.plots>=1:i==1?cnt("house")>1&&!fl("truck"):i==3?S.lvl<2:i==0?S.plots>=2:i==7?S.lvl>=1&&!cnt("school"):i==12?S.lvl>=1&&!cnt("mine")&&!cnt("museum"):i==13?S.lvl>=1&&!S.util.gas:i>=10?S.lvl>=2:true;
+const BAD=[1,5];
+const DF={easy:{e:"🌱",n:"Лёгкий",t:"Наследство дяди",story:"Дядя-фермер оставил деревню и 2 000 000 ₽. Время от времени помогает деньгами.",perk:"Каждые 10 дней +100 000 ₽ от дяди · награды за уровни ×0,7",money:2e6,pop:10,houses:3,plots:5,ck:.85,ik:1.1,ev:.2,bad:.5,int:.01,lk:.7,rk:.7,mood:5,gk:1,hk:1,every:10},
+normal:{e:"🏡",n:"Нормальный",t:"Деревня за 1 ₽",story:"Хозяин отдал деревню за рубль и уехал в город. В казне 1 000 000 ₽.",perk:"Каждые 30 дней грант области +300 000 ₽",money:1e6,pop:10,houses:2,plots:3,ck:1,ik:1,ev:.3,bad:1,int:.02,lk:1,rk:1,mood:0,gk:1,hk:1,every:30},
+hard:{e:"🔥",n:"Сложный",t:"Долги прежнего главы",story:"Прежний глава сбежал, оставив долги и злых жителей. В казне 500 000 ₽.",perk:"Каждые 15 дней налоговая: −3% казны · награды за уровни ×1,5",money:5e5,pop:18,houses:3,plots:2,ck:1.15,ik:.95,ev:.4,bad:1.5,int:.04,lk:1.2,rk:1.5,mood:-8,gk:1,hk:1,every:15},
+nightmare:{e:"💀",n:"Кошмар",t:"Город-призрак",story:"Завод закрылся, люди уехали. Остались 200 000 ₽, пара домов, магазин и 8 жителей. Отели приносят вдвое больше, но рэкетиры уже ходят по улицам.",perk:"Каждые 10 дней рэкетиры забирают 40 000 ₽ · отели ×2 · награды ×2",money:2e5,pop:8,houses:2,plots:2,shop:1,ck:1.1,ik:.9,ev:.45,bad:2,int:.05,lk:1.4,rk:2,mood:-10,gk:.9,hk:2,every:10}};
+const LOANS=[["micro","💸 Микрозайм",0,5e5,56e4,30],["biz","🏦 Бизнес-кредит",0,3e6,37e5,30],["big","🏛 Большой кредит",2,2e7,27e6,60],["mega","🌐 Мега-кредит",4,15e7,21e7,90]];
+const RL=[["rev30","🗓 На месяц",30,.5,.06],["rev180","📆 На полгода",180,2,.25],["rev365","🎯 На год",365,3.5,.55]];
+
+let S=null,tab='city',tt;
+const D=()=>DF[S.diff],cnt=k=>S.b[k]||0,cost=k=>Math.trunc(B[k][2]*(1+.03*cnt(k))*(1+S.day/1000)*D().ck*engD());
+const capac=()=>Object.entries(S.b).reduce((a,[k,c])=>a+B[k][4]*c,0);
+const pPrice=()=>Math.trunc(4e4*(1+S.lvl*1.5)*S.pm*D().ck),pSell=()=>Math.trunc(pPrice()*.85);
+const debt=()=>S.loans.reduce((a,l)=>a+l.left,0);
+const NL=["mint","island","space","voc","col","uni","depot","cell","coffee","taxi","bakery","gym","shop","hotel","mall","factory","night","stadium","tower","airport"];
+const UB={light:"+60 ₽ с жителя в день, счёт ~25 ₽ с жителя · настроение +13 · откроет магазины, отели, ночной рынок",water:"+40 ₽ с жителя в день, счёт ~20 ₽ · без воды настроение −8 и город не растёт",gas:"+80 ₽ с жителя в день, счёт ~40 ₽ · настроение +3"};
+const UT={light:["⚡","Свет и проводка",15e4,0],water:["💧","Вода",12e4,0],gas:["🔥","Газ",25e4,1]},utC=k=>Math.trunc(UT[k][2]*D().ck*(1+S.day/1000));
+const utilCard=()=>`<div class="card"><h2>🔌 Коммуникации</h2><span class="mute">Без света и воды новые жители не приедут, а настроение падает. Всё видно на картинке города: столбы с проводами, водопровод, газовая труба.</span><div class="grid" style="margin-top:8px">${Object.entries(UT).map(([k,u])=>S.util[k]?`<div class="card item"><b>${u[0]} ${u[1]}</b><span>✅ проведено</span></div>`:S.lvl<u[3]?`<div class="card item lock"><b>🔒 ${u[1]}</b><span>с уровня «${LV[u[3]][0]}»</span></div>`:`<button class="item" onclick="A('util','${k}')"><b>${u[0]} ${u[1]}</b><span>${UB[k]}</span><b>${sh(utC(k))} ₽</b></button>`).join("")}</div></div>`;
+const utilSVG=()=>{let o="";if(S.util.light){for(let x=20;x<=340;x+=80)o+=`<path d="M${x} 162V120"/><rect x="${x-7}" y="120" width="14" height="2.5" fill="#25303a"/>`;o+='<path d="M20 124Q60 134 100 124T180 124T260 124T340 124" fill="none" stroke-width="1"/><text x="196" y="116" font-size="9" stroke="none">⚡</text>'}
+ if(S.util.water)o+='<path d="M0 187H360" stroke="#4aa3df" stroke-width="3" fill="none"/><rect x="326" y="98" width="20" height="13" rx="3" fill="#4aa3df"/><path d="M329 111L326 130M343 111L346 130"/>';
+ if(S.util.gas)o+='<path d="M0 183H360" stroke="#e6a82c" stroke-width="2" stroke-dasharray="6 3" fill="none"/><text x="56" y="182" font-size="9" stroke="none">🔥</text><text x="176" y="182" font-size="9" stroke="none">🔥</text><text x="296" y="182" font-size="9" stroke="none">🔥</text>';return o};
+const advise=o=>{let best=-1,bv=-1e18;const sc=[],low=hap()<50;
+ o.forEach((x,i)=>{const[,m,mo,p,pl,e]=x;if(S.money+m<0||S.plots+pl<0){sc.push(null);return}
+  let v=m+(e&&e.mp?e.mp*Math.max(0,S.money):0)-(e&&e.risk?e.risk.p*e.risk.m*Math.max(0,S.money):0)+mo*(low?6e4:2e4)+(p>0&&S.pop<capac()?p*15e3:0)+pl*5e4;
+  if(e){if(e.b)for(const k in e.b)v+=e.b[k]*B[k][2]*.6;if(e.u)v+=15e4;if(e.f)v+=2e5}
+  sc.push(v);if(v>bv){bv=v;best=i}});
+ if(best<0)return{i:-1,t:"сейчас ни один вариант не по карману — отложи на день и накопи денег."};
+ const t2=sc.filter(v=>v!==null).sort((a,b)=>b-a),close=t2.length>1&&t2[0]-t2[1]<Math.max(3e4,Math.abs(t2[0])*.15);
+ return{i:best,t:`«${o[best][0].split(" (")[0]}»${close?", но варианты почти равны — решай по обстановке":""}. ${S.pop>=capac()&&o.some(x=>x[3]>0)?"Жилья нет: жители сверх мест не приедут. ":""}${low?"Настроение низкое — береги радость жителей.":"Настроение в норме."}`}};
+const effText=x=>{const[,m,mo,pp,pl,e]=x,p=[],sg=v=>v>0?"+":"−";
+ if(m)p.push(sg(m)+fmt(Math.abs(m))+" ₽");if(mo)p.push("настроение "+sg(mo)+Math.abs(mo));if(pp)p.push(sg(pp)+Math.abs(pp)+" жителей");if(pl)p.push(sg(pl)+Math.abs(pl)+" уч.");
+ if(e&&e.b)for(const k in e.b)if(e.b[k])p.push(B[k][1]+" "+sg(e.b[k])+Math.abs(e.b[k]));if(e&&e.u)p.push(UT[e.u][1]+" проведено");if(e&&e.n)p.push(e.n);if(e&&e.mp)p.push("−"+Math.abs(Math.round(e.mp*100))+"% казны");if(e&&e.risk)p.push(Math.round(e.risk.p*100)+"% риск штрафа "+Math.round(e.risk.m*100)+"% казны");
+ return p.length?p.join(" · "):"ничего не изменится"};
+function upCalc(f,t){const lim=qty>0?Math.min(qty,cnt(f)):cnt(f);let n=0,tot=0;for(let i=0;i<lim;i++){const c=Math.max(0,B[t][2]*(1+.03*(cnt(t)+i))*(1+S.day/1000)*D().ck*engD()-B[f][2]*.5);if(qty<=0&&tot+c>S.money)break;tot+=c;n++}return[n,Math.trunc(tot)]}
+const upDesc=t=>{const b=B[t],e=[];if(b[4])e.push("жильё +"+b[4]);if(b[5])e.push("аренда "+sh(b[5]));if(b[6])e.push("доход "+sh(b[6]));if(b[8])e.push("настр. +"+b[8]);return e.join(", ")};
+function upgCard(){return`<div class="card"><h2>⬆️ Улучшение зданий</h2><span class="mute">Старое здание заменяют новым: возвращают половину его цены, участок не нужен. Сколько — выбери в блоке «Сколько?».</span>`+UPG.map(([f,t])=>{if(!cnt(f))return"";if(S.lvl<B[t][3])return`<div class="row mute" style="margin-top:6px"><span>🔒 ${B[f][1]} → ${B[t][1]}</span><span>с уровня «${LV[B[t][3]][0]}»</span></div>`;const[n,c]=upCalc(f,t);return`<button style="width:100%;margin-top:8px;text-align:left" onclick="A('upg','${f}')"><b>${B[f][0]} ${B[f][1]} → ${B[t][0]} ${B[t][1]}</b> <span class="mute">(есть ${cnt(f)})</span><br><small class="${n<1||c>S.money?"bad":""}">${n?`×${n} · −${fmt(c)} ₽`:"не хватает денег"} · ${upDesc(t)}</small></button>`}).join("")+`</div>`}
+const insCost=()=>1500+Math.trunc(S.pop*6);
+function insCard(){return`<div class="card"><h2>🛡 Катастрофы и страховка</h2><span class="mute">Снегопады, наводнения и ураганы случаются редко. Без страховки теряешь часть казны, со страховкой — лишь 15% ущерба. Взнос: ${fmt(insCost())} ₽ в день.</span>${S.dis?`<div class="row"><span>Последняя беда</span><b>${S.dis}</b></div>`:""}<button style="width:100%;margin-top:8px" onclick="A('ins')">${S.ins?"✅ Страховка включена — отключить":"🛡 Застраховать город"}</button></div>`}
+function elCard(){const left=(90-S.day%90)%90,r=Math.trunc(hap()+(S.pledge==1&&S.tax<=13?8:0));return`<div class="card"><h2>🗳 Выборы мэра</h2><div class="row"><span>${left?"Через "+left+" дн.":"Сегодня"}</span><b class="${r>=50?"good":"bad"}">Одобрение ${r}%</b></div><div class="bar"><i style="width:${r}%;background:${r>=50?"var(--green)":"var(--red)"}"></i></div><span class="mute">Нужно от 50%. Победа — награда и +4 к настроению, поражение — −6% казны и −12 к настроению. Высокие налоги и заводы роняют рейтинг.${S.pledge==1?" Ты обещал низкие налоги (≤13%): +8 к рейтингу.":S.pledge==2?" Ты обещал реформы.":""}</span></div>`}
+const FEST=[[1,"🎄 Новый год"],[45,"🎪 Весенняя ярмарка"],[75,"🎭 Летний фестиваль"],[110,"🍁 День города"]];
+const attr=()=>["hotel","museum","stadium","park","eco","island","mall","mint"].reduce((a,k)=>a+Math.min(cnt(k),5),0),festM=()=>S.fest&&S.day<=S.fest.until?1+S.fest.m:1;
+const QS_=[["bakery","🥖 Мария, пекарь","Построй мне пекарню — свой хлеб всей улице!"],["park","👵 Нина Петровна","Хочу, чтобы во дворе был парк, а не пустырь."],["clinic","🩺 Доктор Ольга","Людям негде лечиться. Нужна больница."],["lyceum","🏫 Директор Пётр","Школа трещит по швам! Спаси её: нужен лицей."],["cottage","👨‍👩‍👧 Семья Ивановых","Тесно в доме. Мечтаем о коттедже."],["coffee","☕ Бариста Лёша","Открой своё кофе в центре — будет где собраться."],["gym","💪 Тренер Саша","Городу нужен спортзал."],["police","👮 Участковый Иван","Одному на весь город тяжело. Дай отделение полиции."],["firest","🚒 Пожарный Ильдар","Дайте нам настоящую пожарную часть."]];
+const crime=()=>S.pop<30?0:Math.min(100,Math.round(100*Math.max(0,1-cnt("police")*500/S.pop)*(S.tax>20?1.15:1))),crimeP=()=>Math.min(6,Math.trunc(crime()/15));
+function lifeCard(){let h="";if(S.fest&&S.day<=S.fest.until)h+=`<div class="card"><h2>🎉 Праздник в городе</h2>Туристы и гости: доходы +${Math.round(S.fest.m*100)}% ещё ${S.fest.until-S.day+1} дн.</div>`;
+ const nx=FEST.map(x=>[x,(x[0]-1-(S.day-1)%120+120)%120]).sort((a,b)=>a[1]-b[1])[0];h+=`<div class="card"><h2>📅 Ближайший праздник</h2><div class="row"><span>${nx[0][1]}</span><b>${nx[1]?"через "+nx[1]+" дн.":"сегодня"}</b></div><span class="mute">Достопримечательностей в городе: ${attr()} (отели, музеи, парки, ТРЦ, стадионы…). Чем их больше, тем больше гостей на празднике.</span></div>`;
+ if(S.q){const q=S.q,left=Math.max(0,30-(S.day-q.day));h+=`<div class="card"><h2>✉️ Письмо: ${q.who}</h2><span class="note">«${q.t}»</span><div class="row"><span>Построй: ${B[q.k][0]} ${B[q.k][1]}</span><b>${left} дн.</b></div><div class="mute">Награда ${fmt(q.r)} ₽ и настроение +4. Не успеешь — человек обидится (−3).</div></div>`}
+ return h}
+function safeCard(){const c=crime();return`<div class="card"><h2>🚓 Безопасность</h2><div class="row"><span>Преступность</span><b class="${c>40?"bad":"good"}">${c}%</b></div><div class="row"><span>🚓 Полиция: ${cnt("police")} (на ${fmt(cnt("police")*500)} жителей)</span></div><div class="row"><span>🚒 Пожарные: ${cnt("firest")} (на ${fmt(cnt("firest")*800)} жителей)</span></div><span class="mute">Без полиции растут кражи и падает настроение (до −6), налоги выше 20% добавляют ещё. Пожарная часть сокращает шанс пожаров.</span></div>`}
+function dayExtras(done){const fh=FEST.find(x=>x[0]==(done-1)%120+1);if(fh){S.note+=fh[1]+": город готовится к празднику\n";if(S.lvl>=1&&S.later==null&&S.event===null)S.later=EVFEST}
+ if(crime()>40&&Math.random()<crime()/2500){const x=Math.trunc(Math.max(0,S.money)*.015+S.pop*200);S.money-=x;S.note+=`🦹 Кражи: потеряно ${fmt(x)} ₽ — нужна полиция\n`}
+ if(S.q){const q=S.q;if(cnt(q.k)>q.base){S.money+=q.r;S.mood+=4;S.qd=(S.qd||[]).concat(q.k);S.note+=`✉️ ${q.who}: «Спасибо!» +${fmt(q.r)} ₽\n`;S.q=null;S.qn=done+8}else if(done-q.day>30){S.mood-=3;S.note+=`✉️ ${q.who} обиделся: просьба так и не выполнена, настроение −3\n`;S.q=null;S.qn=done+8}}
+ else if(S.pop>=15&&done>=(S.qn||6)){let c=QS_.filter(x=>B[x[0]]&&S.lvl>=B[x[0]][3]&&!(NL.includes(x[0])&&!S.util.light)&&!(S.qd||[]).includes(x[0])&&(x[0]!="lyceum"||cnt("school")>0)&&(x[0]!="cottage"||cnt("house")>0));if(!c.length&&(S.qd||[]).length){S.qd=[]}
+  if(c.length){const x=c[Math.floor(Math.random()*c.length)];S.q={k:x[0],who:x[1],t:x[2],base:cnt(x[0]),day:done,r:Math.trunc(1.5e5*(1+S.lvl*1.5))};S.note+=`✉️ Письмо от ${x[1]}: «${x[2]}»\n`}}
+if(S.ins)S.money-=insCost();
+ if(done>15&&Math.random()<.025){const T=[["❄️ Снегопад","дороги замело",.03],["🌊 Наводнение","затопило нижние улицы",.06],["🌪 Ураган","сорвало крыши",.08],["🌪 Ураган","сорвало крыши",.08]][si()],raw=Math.trunc(Math.max(0,S.money)*T[2]+S.pop*300+5e4),dm=S.ins?Math.trunc(raw*.15):raw;S.money-=dm;S.mood-=S.ins?2:8;S.dis=T[0]+" · день "+done;S.note+=`${T[0]}: ${T[1]}. Ущерб ${fmt(dm)} ₽${S.ins?" (страховка покрыла 85%)":", со страховкой было бы дешевле"}, настроение ${S.ins?"−2":"−8"}\n`}
+ if(done%90==0){const r=Math.trunc(hap()+(S.pledge==1&&S.tax<=13?8:0));if(r>=50){const rw=2e5*(1+S.lvl);S.money+=rw;S.mood+=4;S.note+=`🗳 Выборы мэра: одобрение ${r}% — ты переизбран! +${fmt(rw)} ₽\n`}else{const x=Math.trunc(Math.max(0,S.money)*.06);S.money-=x;S.mood-=12;S.note+=`🗳 Выборы мэра: одобрение ${r}% — ты проиграл! Оппозиция урезала казну (−${fmt(x)} ₽), настроение −12\n`}S.pledge=0;if(S.later==null)S.later=EVEL}}
+function newState(k){const d=DF[k];return{diff:k,tut:0,day:1,money:d.money,pop:1,lvl:0,tax:13,b:{house:1},plots:d.plots,pm:1,mood:0,event:null,last:null,hist:[],note:"",loans:[],log:[],rev:[],util:{light:0,water:0,gas:0},accU:0,accUt:{light:0,water:0,gas:0},bills:[],speed:1,p:0,auto:false,run:false}}
+function L(t){S.log.push([S.day,t]);S.log=S.log.slice(-12)}
+function hap(){let h=50+D().mood+S.mood-(S.tax-13)*1.2;for(const[k,c]of Object.entries(S.b))h+=B[k][8]*Math.min(c,3);if(S.road==1)h-=5;if(!S.util.light)h-=10;else h+=3;if(si()==0&&!S.util.gas)h-=4;h+=tmood()+2*tl("mayor")-crimeP();if(!S.util.water)h-=8;if(S.util.gas)h+=3;return Math.max(0,Math.min(100,h))}
+function fc(){const cap=capac(),occ=cap?Math.min(1,S.pop/cap):0,h=hap();let rent=0,comm=0,upk=0;
+ for(const[k,c]of Object.entries(S.b)){rent+=B[k][5]*c;let v=B[k][6]*c;if(k=='hotel')v*=(.5+h/100)*D().hk;v*=(SM[k]||[1,1,1,1])[si()];comm+=v;upk+=B[k][7]*c}
+ rent*=occ;comm+=S.pop*((S.util.light?60:0)+(S.util.water?40:0)+(S.util.gas?80:0))+tarInc().total;let tax=S.pop*1500*S.tax/100*(1+edu())*(1+.04*tl("mayor"));const ik=D().ik*(.8+h/250)*festM();rent*=ik;comm*=ik;tax*=ik;
+ const nb=Object.entries(S.b).reduce((a,[k,c])=>a+(k=="house"?0:c),0),ut={light:S.util.light?300+S.pop*25+nb*600:0,water:S.util.water?200+S.pop*20:0,gas:S.util.gas?250+S.pop*40:0};ut.light=Math.trunc(ut.light*[1.2,1,.9,1.05][si()]);ut.water=Math.trunc(ut.water*[.9,1,1.3,1][si()]);ut.gas=Math.trunc(ut.gas*[1.6,1,.6,1.1][si()]);const ek=1-.1*tl("eng");ut.light=Math.trunc(ut.light*ek);ut.water=Math.trunc(ut.water*ek);ut.gas=Math.trunc(ut.gas*ek);const uts=ut.light+ut.water+ut.gas;upk+=uts;upk+=teamSal();upk+=fleetBus()*800+fleetCars()*500+(ns()-1)*2e3;
+ const int=Math.max(0,-S.money)*D().int;return{rent,comm,tax,upk,int,ut,uts,net:rent+comm+tax-upk-int,h,cap}}
+const BILL=30;
+function payLoans(){let a=0;for(const l of S.loans){l.days_left--;const x=Math.max(0,l.days_left<=0?l.left-l.acc:Math.min(l.per_day,l.left-l.acc));l.acc+=x;a+=x}return a}
+function billDay(){const u=Math.trunc(S.accU);let lo=0,n="";const ut={...(S.accUt||{})};S.accUt={light:0,water:0,gas:0};S.money-=u;S.accU=0;
+ for(const l of [...S.loans]){const p=Math.min(l.acc,l.left);S.money-=p;l.left-=p;l.acc=0;lo+=p;
+  if(l.left<=0){S.loans=S.loans.filter(x=>x!==l);n+=`✅ Кредит «${l.name}» выплачен\n`}
+  else if(S.money<0){const pen=Math.trunc(l.left*.02);l.left+=pen;n+=`⚠️ Просрочка по «${l.name}»: штраф ${fmt(pen)} ₽\n`}}
+ if(S.money<0&&u>0){S.mood-=6;n+="⚠️ Не хватило денег на счета: настроение −6\n"}
+ S.bills=[{day:S.day,upk:u,loan:Math.trunc(lo),ut},...S.bills].slice(0,6);return`🧾 Списаны счета: −${fmt(u+lo)} ₽\n`+(ut.light||ut.water||ut.gas?`   в т.ч. ⚡ свет ${fmt(ut.light||0)} · 💧 вода ${fmt(ut.water||0)} · 🔥 газ ${fmt(ut.gas||0)} ₽\n`:"")+n}
+function playDay(){const pop0=S.pop,f=fc(),d=D(),la=payLoans(),inc=f.rent+f.comm+f.tax-f.int;S.money+=Math.trunc(inc);S.accU+=f.upk;S.accUt=S.accUt||{light:0,water:0,gas:0};for(const k in f.ut)S.accUt[k]+=f.ut[k];
+ const fin=Math.trunc(inc-f.upk-la);S.rev=[...S.rev,Math.trunc(f.rent+f.comm+f.tax)].slice(-30);const free=f.cap-S.pop;
+ if(f.h>=40&&free>0&&S.util.light&&S.util.water)S.pop+=Math.min(free,Math.max(1,Math.trunc(free*(f.h/100)*.35*d.gk)));
+ else if(f.h<25&&S.pop>0)S.pop=Math.max(0,S.pop-Math.trunc(S.pop*.05)-1);
+ S.mood*=.9;S.pm=Math.max(.6,Math.min(1.6,S.pm*(.93+Math.random()*.15)));S.hist=[...S.hist,fin].slice(-14);
+ S.last={day:S.day,tax:Math.trunc(f.tax),rent:Math.trunc(f.rent),comm:Math.trunc(f.comm),upk:Math.trunc(f.upk),int:Math.trunc(f.int),loan:Math.trunc(la),net:fin,dpop:0,bon:S.bon||0};
+ S.last.dpop=S.pop-pop0;const done=S.day;S.note="";dayExtras(done);
+ while(S.lvl+1<LV.length&&S.pop>=LV[S.lvl+1][1]){S.lvl++;const r=Math.trunc(LV[S.lvl][2]*d.rk);S.money+=r;S.note+=`🎊 Новый уровень: ${LV[S.lvl][0]}! Награда +${fmt(r)} ₽\n`;if(S.lvl==5)S.note+="🏆 МЕГАПОЛИС! ПОБЕДА!\n"}
+ if(done%d.every==0){const k=S.diff;
+  if(k=="easy"){S.money+=1e5;S.note+="🎁 Дядя прислал +100 000 ₽\n"}
+  else if(k=="normal"&&done%30==0){S.money+=3e5;S.note+="🏛 Грант области: +300 000 ₽\n"}
+  else if(k=="hard"){const x=Math.trunc(Math.max(0,S.money)*.03);S.money-=x;S.note+=`🕵️ Налоговая проверка: −${fmt(x)} ₽\n`}
+  else if(k=="nightmare"){S.money-=4e4;S.note+="🕶 Рэкетиры забрали 40 000 ₽\n"}}
+ if(done%BILL==0)S.note+=billDay();
+ if(Math.random()<d.ev){const w=EV.map((_,i)=>!evOK(i)||(i==1&&Math.random()<Math.min(.9,cnt("firest")*800/Math.max(1,S.pop)))?0:BAD.includes(i)?d.bad:1);let r=Math.random()*w.reduce((a,b)=>a+b),i=0;while(r>w[i]&&i<w.length-1){r-=w[i];i++}S.event=i;if(i==5)S.road=1}
+ L(`${fin>=0?"🟢 +":"🔴 "}${fmt(fin)} ₽ за день ${done}`);S.note.trim().split("\n").filter(Boolean).forEach(L);S.day=done+1;S.streak=fin>=0?(S.streak||0)+1:0;S.nwh=[...(S.nwh||[]),nw()].slice(-60);rivTick();goalTick();bankTick();achTick();if((S.day-1)%30==0)L(SEAS[si()][0]+" Наступила "+SEAS[si()][1].toLowerCase()+": "+ST[si()]);if(S.road==2)S.road=0;if(S.later!=null&&S.event===null){S.event=S.later;S.later=null}}
+function rBase(){if(S.rev.length>=5)return Math.trunc(S.rev.reduce((a,b)=>a+b,0)/S.rev.length*30);const f=fc();return Math.trunc((f.rent+f.comm+f.tax)*30)}
+function rOffer(r){const take=Math.trunc(rBase()*r[3]/1e3)*1e3,pct=r[4]*D().lk;return{take,total:take+Math.trunc(take*pct),term:r[2],pct:Math.round(pct*100)}}
+function early(l){const sh=(l.total-l.principal)/l.total;return l.left-Math.trunc(l.left*sh*.2)}
+function takeLoan(key){if(S.loans.length>=2)return"Можно держать не больше 2 кредитов";let name,take,total,term;
+ if(key.startsWith("rev")){const r=RL.find(x=>x[0]==key),o=rOffer(r);({take,total,term}=o);if(take<1e5)return"Выручка пока маленькая — банк не даёт такой кредит";
+  if(S.loans.some(l=>l.key.startsWith("rev")))return"Кредит под выручку уже взят";name="📊 "+r[1].slice(3)}
+ else{const l=LOANS.find(x=>x[0]==key);if(S.lvl<l[2])return"Кредит пока недоступен";if(S.loans.some(x=>x.key==key))return"Такой кредит уже взят";
+  name=l[1];take=l[3];total=take+Math.trunc((l[4]-take)*D().lk);term=l[5]}
+ S.money+=take;S.loans.push({key,name,principal:take,total,left:total,per_day:Math.trunc(total/term),days_left:term,acc:0});L(`🏦 Кредит «${name}»: +${fmt(take)} ₽`);return null}
+
+let svT=0;
+function pack(){const o={...S};["run","p","sched","si","dayInc"].forEach(k=>delete o[k]);o.ts=Date.now();return JSON.stringify(o)}
+function fixS(){if(S.tut===undefined)S.tut=99;S.tar=S.tar||{...TB};S.ach=S.ach||{};S.friends=S.friends||[];S.streak=S.streak||0;if(!S.accUt)S.accUt={light:0,water:0,gas:0};if(!S.util)S.util={light:1,water:1,gas:0};S.loans=S.loans||[];S.log=S.log||[];S.rev=S.rev||[];S.accU=S.accU||0;S.bills=S.bills||[];if(!S.speed)S.speed=1;S.p=0;S.run=false;S.auto=!!S.auto;S.loans.forEach(l=>l.acc=l.acc||0)}
+function cloud(j){if(!(tg&&tg.CloudStorage))return;try{const c=tg.CloudStorage,n=Math.ceil(j.length/3500);for(let i=0;i<n;i++)c.setItem("c"+i,j.slice(i*3500,(i+1)*3500));c.setItem("cn",""+n)}catch(e){}}
+function save(now){if(!S){try{localStorage.removeItem("city")}catch(e){}try{tg&&tg.CloudStorage.setItem("cn","0")}catch(e){}return}
+ const j=pack();try{localStorage.setItem("city",j)}catch(e){}clearTimeout(svT);svT=setTimeout(()=>cloud(j),now?0:800);
+ const e=document.getElementById("svs");if(e)e.textContent="💾 Сохранено в "+new Date().toLocaleTimeString("ru",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}
+function load(cb){let loc=null;try{loc=localStorage.getItem("city")}catch(e){}
+ const fin=v=>{try{S=v?JSON.parse(v):null;if(S&&!S.diff)S=null;if(S)fixS()}catch(e){S=null}cb()};
+ if(tg&&tg.CloudStorage){let done=false;const t=setTimeout(()=>{if(!done){done=true;fin(loc)}},2500);
+  const ts=v=>{try{return v?JSON.parse(v).ts||1:0}catch(e){return 0}},pick=v=>{if(done)return;done=true;clearTimeout(t);fin(v&&ts(v)>=ts(loc)?v:loc)};
+  try{tg.CloudStorage.getItem("cn",(e,n)=>{if(n===""||n===undefined){tg.CloudStorage.getItem("city",(e2,v)=>pick(v));return}
+   if(!+n){done=true;clearTimeout(t);fin(null);return}
+   const ks=Array.from({length:+n},(_,i)=>"c"+i);tg.CloudStorage.getItems(ks,(e3,o)=>pick(o?ks.map(k=>o[k]||"").join(""):null))})}catch(e){clearTimeout(t);fin(loc)}}else fin(loc)}
+
+const R=(x,y,w,h,f,r=0,ex="")=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${f}" ${ex}/>`,
+      P=(p,f,ex="")=>`<polygon points="${p}" fill="${f}" ${ex}/>`,
+      C=(x,y,r,f,ex="")=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${f}" stroke="none" ${ex}/>`;
+const wg=(x,y,c,r,w,h,gx,gy)=>{let s="";for(let i=0;i<c;i++)for(let j=0;j<r;j++)s+=`<rect class="w" x="${x+i*(w+gx)}" y="${y+j*(h+gy)}" width="${w}" height="${h}" rx="1"/>`;return s};
+const RC=["#c4513f","#4a79a8","#8a5a3c","#6b8f4e"],WC=["#f3dfb7","#f0cfa0","#e9e2cf"];
+const BD={
+house:[34,i=>R(25,-40,5,12,"#8a5a3c")+R(2,-20,30,20,WC[i%3],1)+P("-2,-20 17,-38 36,-20",RC[i%4])+R(7,-12,8,12,"#8a5a3c",1)+wg(20,-15,1,1,8,8,0,0)],
+shop:[36,i=>R(0,-24,36,24,"#6fb39b",1)+P("-2,-24 38,-24 34,-14 2,-14","#e6a82c")+R(5,-10,10,10,"#25303a")+wg(21,-11,1,1,10,9,0,0)],
+park:[34,i=>R(8,-12,4,12,"#8a5a3c")+C(10,-21,10,"#4f9d63")+C(7,-24,5,"#6bb86f")+R(25,-9,3,9,"#8a5a3c")+C(26,-16,7,"#6bb86f")],
+school:[46,i=>R(0,-26,46,26,"#e8b85c",1)+P("-2,-26 23,-40 48,-26","#9b4d3a")+R(19,-14,8,14,"#8a5a3c")+wg(4,-20,2,1,7,8,4,0)+wg(31,-20,2,1,7,8,4,0)+`<path d="M23 -40V-54"/>`+P("23,-54 33,-50 23,-46","#c4513f")],
+clinic:[40,i=>R(0,-30,40,30,"#f4f1ea",1)+R(0,-30,40,6,"#4a8fc4")+R(18,-23,4,12,"#c4513f")+R(14,-19,12,4,"#c4513f")+wg(4,-8,1,1,7,8,0,0)+wg(29,-8,1,1,7,8,0,0)],
+hotel:[36,i=>R(0,-54,36,54,"#4a79a8",1)+wg(5,-47,3,5,6,6,3,4)+R(8,-62,20,8,"#e6a82c",2)],
+block:[40,i=>R(0,-74,40,74,i%2?"#8aa3b8":"#a3a8c4",1)+wg(5,-68,4,8,5,5,3,3)+R(0,-76,40,4,"#5d7488")],
+factory:[52,i=>R(40,-50,8,28,"#7b726b")+C(45,-56,5,"#ddd").replace("<circle",'<circle class="smoke"')+R(0,-24,52,24,"#9a8f86")+P("0,-24 0,-36 13,-24","#7b726b")+P("13,-24 13,-36 26,-24","#7b726b")+P("26,-24 26,-36 39,-24","#7b726b")+wg(6,-14,3,1,8,7,5,0)],
+mall:[66,i=>R(0,-38,66,38,"#d98ba5",2)+R(0,-38,66,8,"#a85a77")+wg(5,-25,6,1,7,12,3,0)+R(27,-12,12,12,"#25303a")],
+stadium:[74,i=>`<path d="M0 0V-14Q0 -30 37 -30Q74 -30 74 -14V0Z" fill="#c9c2b2"/><ellipse cx="37" cy="-12" rx="27" ry="8" fill="#5fa863" stroke="none"/>`+R(4,-46,2,18,"#6b7280")+R(68,-46,2,18,"#6b7280")+C(5,-48,3,"#ffe27a")+C(69,-48,3,"#ffe27a")],
+tower:[38,i=>R(2,-112,34,112,i%2?"#7fb2d6":"#6aa0c8",2)+wg(6,-106,4,13,5,5,3,3)+`<path d="M19 -112V-128"/>`+C(19,-129,2.5,"#c4513f")],
+airport:[84,i=>R(0,-18,64,18,"#e9e4d8",2)+R(0,-18,64,5,"#4a79a8")+wg(6,-11,6,1,6,7,4,0)+R(68,-44,10,44,"#c9c2b2")+R(64,-54,18,10,"#7fb2d6",2)],
+mine:[40,i=>P("0,0 14,-26 34,-26 40,0","#7b726b")+R(14,-14,12,14,"#25303a")+R(10,-18,20,4,"#8a5a3c")],museum:[44,i=>R(0,-22,44,22,"#e9e2cf")+P("-2,-22 22,-36 46,-22","#a85a77")+R(5,-20,4,20,"#c9c2b2")+R(15,-20,4,20,"#c9c2b2")+R(25,-20,4,20,"#c9c2b2")+R(35,-20,4,20,"#c9c2b2")],
+space:[30,i=>P("10,0 15,-34 20,0","#e8e8f0")+P("12,-34 15,-46 18,-34","#c4513f")+R(4,-8,6,8,"#8a8f98")+R(20,-8,6,8,"#8a8f98")],
+island:[40,i=>R(0,-4,40,6,"#e6d39a",3)+R(18,-26,3,22,"#7a5a3a")+C(19,-28,9,"#3f9a5a")+C(28,-24,6,"#4fb06a")],
+mint:[30,i=>R(0,-22,30,22,"#d8d2b8")+P("-2,-22 15,-34 32,-22","#8a6f3a")+R(11,-14,8,14,"#7a5a3a")],
+voc:[30,i=>R(0,-16,30,16,"#7a6a52")+P("-2,-16 15,-26 32,-16","#5a4a38")+R(11,-9,8,9,"#e8d9b5")],
+col:[36,i=>R(0,-22,36,22,"#8b6f9c")+P("-2,-22 18,-32 38,-22","#654a78")+R(6,-14,5,5,"#f0e6f5")+R(25,-14,5,5,"#f0e6f5")],
+uni:[44,i=>R(0,-26,44,26,"#b58a5b")+P("-2,-26 22,-40 46,-26","#7d5a36")+R(8,-18,28,18,"#e9dcc3")+R(19,-12,6,12,"#7d5a36")],
+depot:[40,i=>R(0,-14,40,14,"#3f7f67",2)+R(4,-10,12,6,"#cfe8f2")+R(22,-10,12,6,"#cfe8f2")+'<circle cx="9" cy="0" r="3" fill="#222"/><circle cx="31" cy="0" r="3" fill="#222"/>'],
+cell:[14,i=>'<path d="M7 0V-34M0 0L7-34L14 0" stroke-width="1.5" fill="none"/><circle cx="7" cy="-36" r="3" fill="#c4513f" stroke="none"/>'],
+coffee:[30,i=>R(0,-16,30,16,"#6b4a35",1)+P("-2,-16 15,-28 32,-16","#c07a3e")+'<circle cx="22" cy="-8" r="3" fill="#f2e2c4" stroke="none"/>'],
+taxi:[34,i=>R(0,-10,34,10,"#e6c12c",2)+R(8,-18,16,8,"#e6c12c",2)+'<circle cx="8" cy="0" r="3.5" fill="#222"/><circle cx="26" cy="0" r="3.5" fill="#222"/>'],
+bakery:[30,i=>R(0,-16,30,16,"#d9a066",1)+P("-2,-16 15,-27 32,-16","#a4543a")+R(11,-9,8,9,"#fff0d0")],
+gym:[36,i=>R(0,-20,36,20,"#5a6f8c",1)+P("-2,-20 18,-30 38,-20","#3f4f68")+R(6,-13,6,4,"#e0e0e0")+R(24,-13,6,4,"#e0e0e0")],
+night:[34,i=>R(0,-14,34,14,"#3b2f5c",1)+P("-3,-14 17,-30 37,-14","#7a4bb5")+'<circle cx="9" cy="-8" r="2.5" fill="#ffd66b" stroke="none"/><circle cx="25" cy="-8" r="2.5" fill="#ffd66b" stroke="none"/>'],
+eco:[34,i=>P("0,0 17,-30 34,0","#6b8f4e")+R(13,-12,8,12,"#8a5a3c")],fish:[32,i=>`<ellipse cx="14" cy="-4" rx="14" ry="6" fill="#6fb3d9"/><path d="M24 -6L34 -28"/>`],
+lot:[26,i=>`<path d="M0 0H22L26 -6H4Z" fill="#b9d8a0" stroke-dasharray="3 2"/><path d="M4 -6V-15"/>`+P("4,-15 13,-12 4,-9","#e6a82c")]};
+BD.lyceum=[46,i=>R(0,-30,46,30,"#c98f5a",1)+P("-2,-30 23,-46 48,-30","#7d3f2e")+R(19,-14,8,14,"#8a5a3c")+wg(4,-24,2,1,7,8,4,0)+wg(31,-24,2,1,7,8,4,0)+`<path d="M23 -46V-60"/>`+P("23,-60 33,-56 23,-52","#c4513f")];
+BD.gymn=[52,i=>R(0,-34,52,34,"#e9dcc3",1)+P("-2,-34 26,-50 54,-34","#5a4a78")+R(8,-30,4,30,"#c9c2b2")+R(20,-30,4,30,"#c9c2b2")+R(32,-30,4,30,"#c9c2b2")+R(44,-30,4,30,"#c9c2b2")+R(21,-12,10,12,"#7d5a36")];
+BD.super=[46,i=>R(0,-28,46,28,"#4aa3a0",1)+R(0,-28,46,7,"#e6504a")+R(5,-14,12,14,"#25303a")+wg(24,-18,2,1,8,8,3,0)];
+BD.cottage=[34,i=>R(2,-26,30,26,WC[i%3],1)+P("-3,-26 17,-46 37,-26",RC[(i+1)%4])+R(26,-50,5,12,"#8a5a3c")+R(13,-14,9,14,"#8a5a3c",1)+wg(5,-20,1,1,6,6,0,0)+wg(25,-20,1,1,6,6,0,0)];
+NL.push("super","police","firest");
+BD.police=[34,i=>R(0,-24,34,24,"#5a7aa8",1)+R(0,-24,34,5,"#2f4a7a")+R(13,-12,8,12,"#25303a")+C(17,-30,3,"#4a8fe6")];
+BD.firest=[38,i=>R(0,-26,38,26,"#c4513f",1)+R(5,-18,14,18,"#f4efe4")+R(23,-18,10,18,"#f4efe4")+R(0,-30,38,5,"#7a2f26")];
+const BACK=["space","island","mint","uni","mine","eco","factory","hotel","block","mall","stadium","tower","airport"],FRONT=["house","police","firest","cottage","super","lyceum","gymn","shop","park","school","clinic","fish","museum","night","coffee","taxi","bakery","gym","voc","col","depot","cell"];
+function row(it,y,s0){let tw=it.reduce((a,[k])=>a+BD[k][0]+5,0),r=Math.min(s0,330/Math.max(tw,1));
+ if(r<s0*.55){it=it.slice(0,Math.max(1,Math.floor(it.length*r/(s0*.55))));tw=it.reduce((a,[k])=>a+BD[k][0]+5,0);r=Math.min(s0,330/tw)}
+ let x=(360-tw*r)/2,s="";for(const[k,i]of it){s+=`<g transform="translate(${x.toFixed(1)} ${y}) scale(${r.toFixed(2)})">${k=="lot"?"":`<ellipse cx="${BD[k][0]/2}" cy="1.5" rx="${BD[k][0]*.58}" ry="4" fill="#1e293b" opacity=".18" stroke="none"/>`}${BD[k][1](i)}</g>`;x+=(BD[k][0]+5)*r}return s}
+const mk=ks=>{const it=[];for(const k of ks)for(let i=0;i<Math.min(cnt(k),6);i++)it.push([k,i]);return it};
+const roadSVG=()=>S.road==1?'<ellipse cx="70" cy="170" rx="14" ry="4" fill="#1d2329" stroke="none"/><ellipse cx="190" cy="181" rx="11" ry="3" fill="#1d2329" stroke="none"/><path d="M60 166l9 6-5 4M185 176l8 5" stroke="#1d2329"/>':S.road==2?'<path d="M60 176l6-14 6 14zM200 176l6-14 6 14z" fill="#e6a82c"/><text x="130" y="187" font-size="9" fill="#fff" stroke="none">🚧 чинят ночью</text>':"";
+const SEAS=[["❄️","Зима"],["🌱","Весна"],["☀️","Лето"],["🍂","Осень"]],ST=["газ ×1,6, свет ×1,2; кофе, пекарня и такси ×1,3; без газа настроение −4; туристов меньше","спокойное время: всё работает как обычно","вода ×1,3; отели, эко-отель, рыбалка и ночной рынок ×1,4–1,6; газ дешевле","такси ×1,15, кофе ×1,1; счета растут к зиме"];
+const si=()=>Math.floor((S.day-1)/30)%4,SM={coffee:[1.35,1,.9,1.1],taxi:[1.3,1,1,1.15],bakery:[1.25,1,.9,1.1],hotel:[.7,1,1.4,1],eco:[.5,1,1.6,1],fish:[.4,1.1,1.5,1],night:[.9,1,1.4,1],museum:[1.2,1,1,1]};
+const biz=()=>["coffee","taxi","bakery","gym"].reduce((a,k)=>a+cnt(k),0),nw=()=>Math.trunc(S.money+Object.entries(S.b).reduce((a,[k,c])=>a+B[k][2]*c,0)+S.plots*pSell()-debt()+bankVal());
+const myName=()=>((tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.first_name)||"Игрок").replace(/[<>&]/g,"").slice(0,20);
+const GL=[["house3","🏠 Построить 3 дома",b=>cnt("house")-b.house,3,3e5],["pop30","👥 Прирост +30 жителей",b=>S.pop-b.pop,30,25e4],["biz","☕ Открыть свой бизнес (кофейня, такси, пекарня или спортзал)",b=>biz()-b.biz,1,35e4],["plus7","📈 7 дней подряд без убытка",b=>S.streak||0,7,4e5]];
+function newGoal(){const p=GL.filter(g=>!S.g||g[0]!=S.g.id),g=p[Math.floor(Math.random()*p.length)];S.g={id:g[0],day:S.day,base:{house:cnt("house"),pop:S.pop,biz:biz()}}}
+function goalTick(){if(!S.g)return newGoal();const g=GL.find(x=>x[0]==S.g.id);if(g[2](S.g.base)>=g[3]){S.money+=g[4];S.mood+=4;S.gdone=(S.gdone||0)+1;L("🎯 Цель выполнена: "+g[1]+" (+"+fmt(g[4])+" ₽)");toast("🎯 Цель недели выполнена! +"+sh(g[4])+" ₽");newGoal()}else if(S.day-S.g.day>=7){L("⌛ Цель недели не выполнена: "+g[1]);newGoal()}}
+const AC=[["h5","🏠 Первый квартал: 5 домов",()=>cnt("house")>=5],["p100","🏘 100 жителей",()=>S.pop>=100],["p1000","🌆 1000 жителей",()=>S.pop>=1000],["util","💡 Свет, вода и газ подключены",()=>S.util.light&&S.util.water&&S.util.gas],["cafe","☕ Своя кофейня",()=>cnt("coffee")>0],["taxi","🚕 Свой таксопарк",()=>cnt("taxi")>0],["m10","💰 10 млн в казне",()=>S.money>=1e7],["debt0","🏦 Выплатил кредит",()=>S.bills.some(b=>b.loan>0)&&!S.loans.length],["win","❄️ Пережил первую зиму",()=>S.day>31],["g3","🎯 3 цели недели выполнены",()=>(S.gdone||0)>=3],["dep","🏦 Вклад принёс проценты",()=>(S.depdone||0)>=1],["mega","🗽 Мегаполис",()=>S.lvl>=5],["bank","🏦 Свой банк и валюта",()=>cnt("mint")>0],["isl","🏝 Остров-курорт",()=>cnt("island")>0],["spc","🚀 Космодром",()=>cnt("space")>0],["cup","⚔️ 5 побед в боях за районы",()=>(S.bw||0)>=5]];
+function achTick(){S.ach=S.ach||{};for(const a of AC)if(!S.ach[a[0]]&&a[2]()){S.ach[a[0]]=S.day;S.money+=1e5;L("🏅 Достижение: "+a[1]+" (+100 000 ₽)");toast("🏅 "+a[1])}}
+function goalCard(){if(!S.g)goalTick();const g=GL.find(x=>x[0]==S.g.id),v=Math.max(0,g[2](S.g.base)),left=Math.max(0,7-(S.day-S.g.day));
+ return`<div class="card"><h2>${SEAS[si()][0]} ${SEAS[si()][1]} · день ${(S.day-1)%30+1}/30</h2><span class="mute">${ST[si()]}</span></div><div class="card"><h2>🎯 Цель недели</h2>${g[1]}<div class="row"><span>Прогресс ${Math.min(v,g[3])}/${g[3]} · осталось ${left} дн.</span><b>+${sh(g[4])} ₽</b></div></div>`}
+const moreCards=()=>{const rows=[{n:myName()+" (ты)",l:S.lvl,p:S.pop,c:nw()},...rivRows(),...(S.friends||[])].sort((a,b)=>b.c-a.c);
+ return statsCard()+battleCard()+teamCard()+`<div class="card"><h2>🏆 Рейтинг друзей</h2><span class="mute">Капитал = казна + имущество − долги: кредит богаче не делает. Друзей добавляют по визитке.</span>${rows.map((r,i)=>`<div class="row"><span>${i+1}. ${r.n} · ${LV[r.l][0]} · ${fmt(r.p)} жит.</span><b>${sh(r.c)} ₽</b></div>`).join("")}<div class="grid" style="margin-top:8px"><button onclick="A('card')">📤 Моя визитка</button><button onclick="A('addf')">➕ Друг</button></div></div><div class="card"><h2>🏅 Достижения ${Object.keys(S.ach||{}).length}/${AC.length}</h2>${AC.map(a=>`<div class="row"><span>${(S.ach||{})[a[0]]?"✅":"⬜️"} ${a[1]}</span></div>`).join("")}<span class="mute">За каждое +100 000 ₽</span></div>${settingsCard()}`};
+const TB={bus:37,card:18,taxi:250,sim:600,wifi:400},TR={bus:[5,150],card:[2,80],taxi:[50,800],sim:[100,2500],wifi:[100,1500]};
+const T=()=>S.tar||(S.tar={...TB}),dem=(p,b)=>Math.max(.15,Math.min(1.5,(b/p)**.7)),edu=()=>Math.min(.4,cnt("school")*.02+cnt("lyceum")*.035+cnt("gymn")*.05+cnt("voc")*.03+cnt("col")*.05+cnt("uni")*.08),stu=()=>Math.trunc(S.pop*Math.min(.4,.08+cnt("school")*.02+cnt("voc")*.03+cnt("col")*.04+cnt("uni")*.06));
+const fleetBus=()=>cnt("depot")?cnt("depot")+Math.min(S.buses||0,cnt("depot")*9):0,fleetCars=()=>cnt("taxi")?cnt("taxi")*2+Math.min(S.cars||0,cnt("taxi")*6):0,vc=k=>Math.trunc((k=="bus"?25e4:18e4)*D().ck);
+const vq={bus:1,car:1},vqs={bus:"1",car:"1"};
+function setVQ(k,v){vqs[k]=String(v).replace(/\D/g,"").slice(0,6);vq[k]=Math.max(1,Math.min(100000,parseInt(vqs[k])||1));render();const e=document.getElementById("vq_"+k);if(e){e.focus();try{e.setSelectionRange(e.value.length,e.value.length)}catch(_){}}}
+const vRoom=k=>k=="bus"?cnt("depot")*10-fleetBus():cnt("taxi")*8-fleetCars();
+function vRow(k,title,desc){const room=vRoom(k),n=Math.max(1,Math.min(vq[k],Math.max(1,room))),mx=Math.max(0,Math.min(room,Math.floor(S.money/vc(k))));
+ return`<div class="row" style="margin-top:12px"><span>${title}: ${k=="bus"?fleetBus():fleetCars()}/${k=="bus"?cnt("depot")*10:cnt("taxi")*8} ${desc}</span></div>`+(room<1?`<span class="mute">Парк полон — построй ещё один.</span>`:`<div style="display:flex;gap:6px;margin-top:6px"><input id="vq_${k}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${vqs[k]}" oninput="setVQ('${k}',this.value)" style="width:90px;padding:9px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);color:var(--ink);font:inherit">${[10,50].map(p=>`<button onclick="setVQ('${k}',${p})" style="flex:1;padding:8px 0">${p}</button>`).join("")}<button onclick="setVQ('${k}',${Math.max(1,mx)})" style="flex:1;padding:8px 0">Макс</button></div><button style="width:100%;margin-top:6px" onclick="A('buyv','${k}:${n}')">➕ Купить ${fmt(n)} шт. · −${fmt(n*vc(k))} ₽</button>`)}
+function fleetUI(){let h="";if(cnt("depot"))h+=vRow("bus","🚌 Автобусов","(по 100 поездок в день, содержание 800 ₽)");if(cnt("taxi"))h+=vRow("car","🚕 Машин такси","(по 18 поездок в день, содержание 500 ₽)");return h}
+const DEPS=[["free","💳 Накопительный счёт",0,.08,.08],["m3","🗓 Вклад на 3 месяца",90,.13,.04],["m6","📆 Вклад на полгода",180,.16,.06],["y1","🎯 Вклад на год",365,.20,.08]];
+const MK={stock:["📊 Фонд акций",.0006,.011,.01,.10,.10],crypto:["🪙 Крипта",.0009,.035,.012,.25,.25]};
+let dAmt=1e6,dPct=0;const amt=()=>dPct?Math.max(0,Math.trunc(S.money*dPct/100)):dAmt;
+const BK=()=>{if(!S.deps){S.deps=[];S.hold={stock:0,crypto:0};S.cost={stock:0,crypto:0};S.mkt={stock:100,crypto:100};S.mh={stock:[100],crypto:[100]};for(let i=0;i<29;i++)for(const k in MK)pStep(k)}if(!S.sav)S.sav={bal:0};return S},dp=k=>DEPS.find(d=>d[0]==k),gauss=()=>{let u=0;for(let i=0;i<6;i++)u+=Math.random();return(u-3)/.707};
+const depVal=d=>{const t=dp(d.k),days=S.day-d.start,mat=t[2]&&days>=t[2];return Math.trunc(d.amt*(1+(mat?(t[3]+br())*t[2]:((t[2]?t[4]:t[3])+br())*days)/365))};
+const pStep=k=>{const m=MK[k];let r=m[1]+m[2]*gauss();if(Math.random()<m[3])r+=Math.random()<.5?-m[5]:m[4];S.mkt[k]=Math.max(5,S.mkt[k]*(1+r));S.mh[k]=[...S.mh[k],S.mkt[k]].slice(-30)};
+const bankVal=()=>{BK();return S.sav.bal+S.deps.reduce((a,d)=>a+d.amt,0)+S.hold.stock*S.mkt.stock+S.hold.crypto*S.mkt.crypto+(S.su?S.su.amt:0)};
+function bankTick(){BK();for(const k in MK)pStep(k);S.sav.bal*=1+(.08+br())/365;
+ for(const d of [...S.deps]){const t=dp(d.k);if(t[2]&&S.day-d.start>=t[2]){const v=depVal(d);S.money+=v;S.deps.splice(S.deps.indexOf(d),1);S.depdone=(S.depdone||0)+1;L(`🏦 Вклад «${t[1]}» созрел: +${fmt(v-d.amt)} ₽ процентов`);toast(`🏦 Вклад созрел: +${sh(v-d.amt)} ₽`)}}
+ if(S.su&&S.day-S.su.day>=60){const r=Math.random(),x=r<.2?4:r<.5?1.5:r<.7?1:0,v=Math.trunc(S.su.amt*x);S.money+=v;L(`🚀 Стартап: вложил ${fmt(S.su.amt)} ₽, получил ${fmt(v)} ₽`);toast(x?`🚀 Стартап принёс ×${x}`:"🚀 Стартап прогорел");S.su=null}}
+const dLab=(kd,k)=>{if(kd=="dep"){const t=dp(k),n=amt();return`Своя сумма: ${fmt(n)} ₽ → ${t[2]?"через "+t[2]+" дн. получишь "+fmt(n*(1+t[3]*t[2]/365)):"за 30 дн. +"+fmt(n*t[3]*30/365)} ₽`}
+ if(kd=="sav")return`Своя сумма: ${fmt(amt())} ₽ · +${fmt(amt()*.08/365*30)} ₽ за 30 дней`;
+ if(kd=="inv")return`Своя сумма: ${fmt(amt())} ₽ ≈ ${(amt()*.995/S.mkt[k]).toFixed(1)} паёв · комиссия 0,5%`;
+ return`Своя сумма: ${fmt(amt())} ₽ на 60 дней`};
+function setD(v){dPct=0;dAmt=Math.max(1e3,Math.min(1e12,parseInt(v)||1e3));if(Object.values(pc).includes("c")){render();const e=document.getElementById("din");if(e){e.focus();try{e.setSelectionRange(e.value.length,e.value.length)}catch(_){}}}}
+function updD(){document.querySelectorAll("[data-d]").forEach(e=>{const[k,b]=e.dataset.d.split(":");e.innerHTML=dLab(k,b)})}
+const FR=[.1,.2,.5,1],pctAmt=f=>f===undefined||f==="c"?amt():String(f)[0]=="@"?Math.trunc(+String(f).slice(1)||0):Math.trunc(S.money*+f/100);
+const putRow=(act,arg)=>`<div style="display:flex;gap:5px;margin-top:6px">${[10,20,50,100].map(p=>`<button onclick="A('${act}','${arg}:${p}')" style="flex:1;padding:7px 0;font-size:12px">${p}%</button>`).join("")}<button onclick="A('${act}','${arg}:c')" style="flex:1.4;padding:7px 0;font-size:12px">Своя сумма</button></div>`;
+const wdRow=(act,arg)=>`<div style="display:flex;gap:5px;margin-top:6px">${FR.map(f=>`<button onclick="A('${act}','${arg}:${f}')" style="flex:1;padding:7px 0;font-size:12px">${f*100}%</button>`).join("")}<button onclick="A('${act}','${arg}:c')" style="flex:1.4;padding:7px 0;font-size:12px">Своя сумма</button></div>`;
+const spark=(h,up)=>{const mn=Math.min(...h),mx=Math.max(...h),a=h.length>1?h:[h[0],h[0]],pts=a.map((v,i)=>`${(i/(a.length-1)*100).toFixed(1)},${(28-26*(v-mn)/(mx-mn||1)).toFixed(1)}`).join(" ");return`<svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:100%;height:56px;display:block;margin:4px 0"><polyline points="${pts}" fill="none" stroke="${up?"var(--green)":"var(--red)"}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`};
+let pc={},ca={};const pcOf=k=>pc[k]===undefined?10:pc[k],caOf=k=>ca[k]||0,frOf=k=>pcOf(k)=="c"?"@"+caOf(k):pcOf(k)/100,buyArg=k=>pcOf(k)=="c"?"@"+caOf(k):pcOf(k),buyOf=k=>pctAmt(buyArg(k)),shOn="background:#e6a82c55;border-color:#e6a82c";
+const pcRow=k=>`<div style="display:flex;gap:5px;margin-top:10px"><span class="mute" style="align-self:center;min-width:34px">%</span>${[10,20,50,100].map(p=>`<button onclick="A('pc','${k}:${p}')" style="flex:1;padding:8px 0;font-size:13px;${pcOf(k)==p?shOn:""}">${p}%</button>`).join("")}<button onclick="A('pc','${k}:c')" style="flex:1.3;padding:8px 0;font-size:13px;${pcOf(k)=="c"?shOn:""}">Своя</button></div>${pcOf(k)=="c"?`<input id="in_${k}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Введи свою сумму, ₽" value="${ca[k]||""}" oninput="setCA('${k}',this.value)" style="width:100%;margin-top:8px;padding:10px;border:2.5px solid var(--gold);border-radius:12px;background:var(--card);color:var(--ink);font:inherit">`:""}`;
+const tradeRow=(lb,ba,bn,ls,sa,sn)=>`<div style="display:flex;gap:8px;margin-top:8px"><button ${bn>0&&ba?`onclick="${ba}"`:"disabled"} style="flex:1;padding:10px 4px;background:#2f6f5e33;border-color:var(--green)"><b>${lb}</b><br><small>${fmt(bn)} ₽</small></button>${ls?`<button ${sn>0&&sa?`onclick="${sa}"`:"disabled"} style="flex:1;padding:10px 4px;background:#c4513f33;border-color:var(--red)"><b>${ls}</b><br><small>${fmt(sn)} ₽</small></button>`:""}</div>`;
+const sellOf=(k,val)=>Math.trunc(pcOf(k)=="c"?Math.min(val,caOf(k)):val*pcOf(k)/100);
+function setCA(k,v){ca[k]=Math.max(0,Math.min(1e13,Math.trunc(+String(v).replace(/\D/g,"")||0)));render();const e=document.getElementById("in_"+k);if(e){e.focus();try{e.setSelectionRange(e.value.length,e.value.length)}catch(_){}}}
+function bankCard(){BK();
+ let h=`<div class="card"><h2>🏦 Банк и инвестиции</h2><span class="mute">В каждом пункте: сверху выбери процент, слева — положить / купить, справа — снять / продать. Нажми «Своя» и впиши любую сумму сам. Свободно ${fmt(S.money)} ₽ · во вкладах и активах ${fmt(bankVal())} ₽ (идёт в капитал)</span></div>`;
+ h+=`<div class="card"><h2>💳 Накопительный счёт · ${+((.08+br())*100).toFixed(1)}% годовых</h2><span class="mute">Клади и снимай когда хочешь, проценты капают каждый день.</span><div class="row"><span>Баланс</span><b>${fmt(S.sav.bal)} ₽</b></div><div class="row"><span class="mute">Доход в день</span><b class="good">+${fmt(S.sav.bal*(.08+br())/365)} ₽</b></div>${pcRow("sav")}${tradeRow("➕ Положить",`A('sadd','s:${buyArg("sav")}')`,buyOf("sav"),"➖ Снять",`A('swd','s:${frOf("sav")}')`,sellOf("sav",S.sav.bal))}</div>`;
+ h+=`<div class="card"><h2>📆 Срочные вклады</h2><span class="mute">Ставка выше, но деньги надо держать до срока. Заберёшь раньше — только «досрочная» ставка за прошедшие дни. Забирать можно частями.</span>`+DEPS.filter(t=>t[2]).map(t=>{const k="d_"+t[0],n=buyOf(k);return`<div style="margin-top:14px;padding-top:10px;border-top:2px dashed var(--mute)"><div class="row"><b>${t[1]}</b><b>${+(t[3]*100).toFixed(1)}% годовых</b></div><span class="mute">срок ${t[2]} дн. · досрочно ${+(t[4]*100).toFixed(1)}% · через срок получишь ${fmt(n*(1+t[3]*t[2]/365))} ₽</span>${pcRow(k)}${tradeRow("➕ Открыть вклад",`A('dep','${t[0]}:${buyArg(k)}')`,n)}</div>`}).join("")
+  +S.deps.filter(d=>dp(d.k)[2]).map(d=>{const i=S.deps.indexOf(d),t=dp(d.k),days=S.day-d.start,mat=t[2]&&days>=t[2],k="w"+i;return`<div style="margin-top:14px;padding-top:10px;border-top:2px solid var(--ink)"><div class="row"><b>Открыт: ${t[1]}</b><b>${fmt(d.amt)} ₽</b></div><span class="mute">${mat?"срок вышел":"осталось "+(t[2]-days)+" дн."} · сейчас заберёшь ${fmt(depVal(d))} ₽${!mat?` (по сроку ${fmt(d.amt*(1+t[3]*t[2]/365))} ₽)`:""}</span>${pcRow(k)}${tradeRow("➖ Забрать",`A('wd','${i}:${frOf(k)}')`,sellOf(k,depVal(d)))}</div>`}).join("")+`</div>`;
+ h+=`<div class="card"><h2>📈 Инвестиции с риском</h2><span class="mute">Цена меняется каждый день: можно заработать больше вклада, а можно уйти в минус. Бывают обвалы и взлёты.</span>`+Object.keys(MK).map(k=>{const m=MK[k],p=S.mkt[k],hh=S.mh[k],prev=hh.length>1?hh[hh.length-2]:p,ch=(p/prev-1)*100,val=S.hold[k]*p*.995,pl=S.hold[k]*p-S.cost[k];
+   return`<div style="margin-top:14px;padding-top:10px;border-top:2px dashed var(--mute)"><div class="row"><b>${m[0]}</b><b class="${ch>=0?"good":"bad"}">${p.toFixed(2)} (${ch>=0?"+":""}${ch.toFixed(1)}%)</b></div>${spark(hh,p>=hh[0])}<span class="mute">за 30 дней: ${((p/hh[0]-1)*100).toFixed(0)}%</span>`
+   +`<div class="row"><span>У тебя на ${fmt(S.hold[k]*p)} ₽</span><b class="${pl>=0?"good":"bad"}">${S.hold[k]>0?(pl>=0?"+":"−")+fmt(Math.abs(pl))+" ₽":"—"}</b></div>`
+   +pcRow(k)+tradeRow("➕ Купить",`A('buyi','${k}:${buyArg(k)}')`,buyOf(k),"➖ Продать",`A('selli','${k}:${frOf(k)}')`,sellOf(k,val))+`<span class="mute">комиссия 0,5%</span></div>`}).join("")
+  +`<div style="margin-top:14px;padding-top:10px;border-top:2px dashed var(--mute)"><div class="row"><b>🚀 Стартап</b><b>60 дней</b></div><span class="mute">20%: ×4 · 30%: ×1,5 · 20%: вернёшь · 30%: потеряешь всё</span>`+(S.su?`<div class="row"><span>Вложено ${fmt(S.su.amt)} ₽</span><b>ещё ${60-(S.day-S.su.day)} дн.</b></div>`:pcRow("su")+tradeRow("🚀 Вложить",`A('st','s:${buyArg("su")}')`,buyOf("su")))+`</div></div>`;
+ return h}
+function tarInc(){const t=T(),r={bus:0,taxi:0,sim:0,wifi:0};
+ if(cnt("depot")){const R=Math.min(S.pop*.55,fleetBus()*100),st=Math.min(R,stu());r.bus=(R-st)*t.bus*dem(t.bus,37)+(S.cardOn?st*t.card*dem(t.card,18):st*t.bus*dem(t.bus,37)*.4)}
+ if(cnt("taxi"))r.taxi=fleetCars()*18*t.taxi*dem(t.taxi,250)*SM.taxi[si()];
+ if(cnt("cell")){r.sim=Math.min(S.pop*.8,cnt("cell")*3e3)*t.sim/30*dem(t.sim,600);r.wifi=Math.min(S.pop*.5,cnt("cell")*2e3)*t.wifi/30*dem(t.wifi,400)}
+ r.total=r.bus+r.taxi+r.sim+r.wifi;return r}
+function tmood(){const t=T();let m=0;const ch=(k,ok)=>{if(ok){const q=t[k]/TB[k];m+=q>1.8?-5:q>1.4?-3:q<.7?2:0}};ch("bus",cnt("depot"));ch("taxi",cnt("taxi"));ch("sim",cnt("cell"));ch("wifi",cnt("cell"));if(S.cardOn&&cnt("depot"))m+=3;return m}
+const SVC=[["bus","🚌 Проезд","depot","нужен автопарк"],["taxi","🚕 Такси","taxi","нужен свой таксопарк"],["sim","📱 SIM-карта в месяц","cell","нужна вышка связи"],["wifi","📶 Wi-Fi в месяц","cell","нужна вышка связи"]];
+const prIn=k=>`<div style="display:flex;gap:6px;margin-top:6px"><input id="pr_${k}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="своя цена ${TR[k][0]}–${TR[k][1]} ₽" onkeydown="if(event.key=='Enter')A('prset','${k}')" style="flex:1;min-width:0;padding:9px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);color:var(--ink);font:inherit"><button onclick="A('prset','${k}')" style="padding:8px 16px">OK</button></div>`;
+const tbtn=(k,d)=>`<button onclick="A('tar','${k}:${d}')" style="flex:1;padding:6px 0">${d>0?"+":""}${d}</button>`;
+function tarCard(){const t=T(),r=tarInc();
+ return`<div class="card"><h2>💳 Тарифы</h2><span class="mute">Свои цены: дороже — больше с клиента, но клиентов и настроения меньше; дешевле — наоборот. В скобках базовая цена.</span>`+SVC.map(([k,n,need,lock])=>cnt(need)?`<div class="row" style="margin-top:8px"><span>${n} (${TB[k]} ₽)</span><b>${t[k]} ₽ · ${sh(r[k])} ₽/день</b></div><div style="display:flex;gap:6px">${[-50,-5,-1,1,5,50].filter(d=>Math.abs(d)<=TB[k]).map(d=>tbtn(k,d)).join("")}</div>${prIn(k)}`:`<div class="row" style="margin-top:8px"><span>🔒 ${n}</span><span class="mute">${lock}</span></div>`).join("")+fleetUI()+
+ (cnt("depot")?`<div class="row" style="margin-top:10px"><span>🎓 Карта школьника и студента (${fmt(stu())} чел.)</span><b>${S.cardOn?t.card+" ₽":"выкл"}</b></div><button style="width:100%" onclick="A('cardon')">${S.cardOn?"Отключить карту":"Оформить карту"}</button>${S.cardOn?`<div style="display:flex;gap:6px;margin-top:6px">${[-5,-1,1,5].map(d=>tbtn("card",d)).join("")}</div>${prIn("card")}`:""}<span class="mute">С картой учащиеся ездят по льготной цене, настроение +3. Без неё они ездят в 2,5 раза реже.</span>`:"")+
+ `<div class="row" style="margin-top:8px"><span>🎓 Образование жителей</span><b>налоги ×${(1+edu()).toFixed(2)}</b></div><span class="mute">Школа, училище, колледж и университет повышают зарплаты и налоги.</span></div>`}
+
+let cam=0,sel=0,qty=1;
+const QS=[1,10,50,100];
+const bCost=(k,n)=>{let t=0,c=cnt(k);for(let i=0;i<n;i++)t+=B[k][2]*(1+.03*(c+i))*(1+S.day/1000)*D().ck*engD();return Math.trunc(t)};
+const bMax=k=>{let n=0,t=0,c=cnt(k);while(n<S.plots&&n<10000){const x=B[k][2]*(1+.03*(c+n))*(1+S.day/1000)*D().ck*engD();if(t+x>S.money)break;t+=x;n++}return n};
+const qN=k=>qty>0?qty:(k=="plot"?Math.floor(S.money/pPrice()):bMax(k));
+const qLab=(kd,k)=>{if(kd=="pb"){const n=qN("plot"),t=n*pPrice();return`➕ Купить ${n} уч.<br><small>${fmt(t)} ₽${t>S.money?" · не хватает "+fmt(t-S.money):""}</small>`}
+ if(kd=="ps"){const n=qty>0?Math.min(qty,S.plots):S.plots;return`➖ Продать ${n}<br><small>+${fmt(n*pSell())} ₽${qty>S.plots?" (есть только "+S.plots+")":""}</small>`}
+ const n=qN(k),t=bCost(k,n);return n<1?"нет участков или денег":`+${n} → ${sh(t)} ₽${n>S.plots?" · мало участков ("+S.plots+")":t>S.money?" · не хватает денег":""}`};
+const qCls=k=>{const n=qN(k);return n<1||n>S.plots||bCost(k,n)>S.money?"bad":""};
+const qOn=n=>n==qty?"background:#e6a82c55;border-color:#e6a82c":"";
+const qBar=()=>`<div class="card"><h2>🔢 Сколько?</h2><div style="display:flex;gap:6px">${QS.map(n=>`<button data-qc="${n}" onclick="A('q',${n})" style="flex:1;padding:8px 0;${qOn(n)}">${n}</button>`).join("")}<button data-qc="0" onclick="A('q',0)" style="flex:1;padding:8px 0;${qOn(0)}">Макс</button></div><input id="qin" type="number" inputmode="numeric" min="1" max="10000" placeholder="или введи своё число" value="${qty>0&&!QS.includes(qty)?qty:""}" oninput="setQ(this.value)" style="width:100%;margin-top:8px;padding:10px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);color:var(--ink);font:inherit"><span class="mute">Цена считается сразу. «Макс» — сколько хватит денег и участков.</span></div>`;
+function setQ(v){qty=Math.max(1,Math.min(10000,parseInt(v)||1));updQ()}
+function updQ(){document.querySelectorAll("[data-q]").forEach(e=>{const[k,b]=e.dataset.q.split(":");e.innerHTML=qLab(k,b);if(k=="b")e.className=qCls(b)});document.querySelectorAll("[data-qc]").forEach(e=>{const on=+e.dataset.qc==qty;e.style.background=on?"#e6a82c55":"";e.style.borderColor=on?"#e6a82c":""})}
+const STN=["Центральная","Садовая","Школьная","Речная","Парковая","Заводская","Нагорная","Морская","Лесная","Звёздная","Южная","Северная"];
+const ns=()=>S.streets||1,streetCost=()=>Math.trunc(5e5*(1+(ns()-1)*.7)*(1+S.day/1000)*D().ck),streetMax=()=>Math.min(12,3+S.lvl*2);
+function streetCard(){return`<div class="card"><h2>🛣 Улицы: ${ns()}/${streetMax()}</h2>${STN.slice(0,ns()).map((n,i)=>`<div class="row"><span>${i==sel?"📍 ":""}${n}</span><span class="mute">12 мест</span></div>`).join("")}<button style="width:100%;margin-top:8px" onclick="A('street')">➕ Проложить улицу «${STN[ns()%STN.length]}» (−${fmt(streetCost())} ₽)</button><span class="mute">Новая улица: +4 участка, настроение +2, содержание дороги 2 000 ₽ в день. Больше улиц открывается с ростом города.</span></div>`}
+
+const CAMS=["🏙 Улица","🏠 Дом","🛣 Дорога","🏪 Центр","🚁 Сверху"];
+const camBar=()=>`<div class="camb">${CAMS.map((c,i)=>`<button class="${i==cam?"on":""}" onclick="A('cam',${i})">${c}</button>`).join("")}</div>${ns()>1&&(cam==0||cam==4)?`<div style="display:flex;gap:5px;margin:-2px 0 6px;padding:2px 2px 6px;overflow-x:auto">${STN.slice(0,ns()).map((n,i)=>`<button onclick="A('sel',${i})" style="flex:0 0 auto;padding:5px 10px;font-size:12px;border-radius:10px;box-shadow:none;${i==sel?"background:var(--gold);color:#25303a":""}">📍 ${n}</button>`).join("")}</div>`:""}${cam?`<div class="mute" style="margin-bottom:8px;padding:0 2px">${camCap()}</div>`:""}`;
+
+function camCap(){const f=fc(),cells=Object.values(S.b).reduce((a,c)=>a+c,0);
+ return cam==1?`🏠 Заселено ${S.pop} из ${capac()} · аренда +${sh(f.rent)} ₽/день · свободные комнаты сдаются`:cam==2?`🚌 Автобусов: ${fleetBus()} · 🚕 Такси: ${fleetCars()} · проезд ${T().bus} ₽`:cam==3?`🏪 Бизнес-доход +${sh(f.comm)} ₽/день · торговых точек: ${Object.keys(SHOP).filter(k=>cnt(k)).length}`:cam==4?`🚁 Улица «${STN[sel%STN.length]}» · всего построек ${cells} · свободных участков ${S.plots}`:""}
+
+const SHOP={coffee:["КОФЕЙНЯ","#7a4b32","#f6e5c8"],bakery:["ПЕКАРНЯ","#c97a2c","#fff2d6"],shop:["МАГАЗИН","#2f7f67","#d8f3ea"],gym:["СПОРТЗАЛ","#3b649c","#dce8fa"],taxi:["ТАКСИ","#d9a81e","#fff6cc"],depot:["АВТОПАРК","#246d82","#d2eff7"],night:["НОЧНОЙ РЫНОК","#6b3fa0","#eadcf8"],hotel:["ОТЕЛЬ","#9e3b5c","#fadce6"],mall:["ТРЦ","#b84335","#fadcd8"],cell:["СВЯЗЬ","#47597a","#dde4f0"],uni:["УНИВЕР","#755230","#f0e3d5"],col:["КОЛЛЕДЖ","#5a416e","#eadff2"]};
+
+function fxSVG(){const sn=si(),pv=S.run?S.p:.1;let o="";const N=cam==1?0:[26,12,0,12][sn],col=["#fff","#ffc0d4","#fff","#d9742f"][sn];
+ for(let i=0;i<N;i++){const x=(i*47)%360,dur=(sn==0?4:6)+(i%5),dl=-((i*.9)%dur).toFixed(2),r=sn==0?1.3+(i%3)*.5:2.2;
+  o+=`<circle r="${r}" fill="${col}" stroke="none" opacity=".85"><animate attributeName="cy" from="-6" to="196" dur="${dur}s" begin="${dl}s" repeatCount="indefinite"/><animate attributeName="cx" values="${x};${x+14};${x-8};${x+10}" dur="${dur}s" begin="${dl}s" repeatCount="indefinite"/></circle>`}
+ if(sn==2)o+='<polygon points="260,0 330,0 190,190 90,190" fill="#fff3b0" opacity=".10" stroke="none"/><polygon points="320,0 360,0 290,190 240,190" fill="#fff3b0" opacity=".08" stroke="none"/>';
+ return`<defs><radialGradient id="vg" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".4"/></radialGradient></defs>${o}<rect id="ctint" width="360" height="190" fill="#0b1636" opacity="${(sky(pv)[1]*.45).toFixed(2)}" stroke="none" pointer-events="none"/><rect width="360" height="190" fill="url(#vg)" stroke="none" pointer-events="none"/>`}
+function camExtra(){let o="";const T0=(x,y,t,sz)=>`<text x="${x}" y="${y}" font-size="${sz}" stroke="none">${t}</text>`;const lamp=(x,y)=>`<path d="M${x} ${y}V${y-24}"/><circle class="glow" cx="${x}" cy="${y-26}" r="14" fill="#ffe27a" fill-opacity=".5" stroke="none"/>${C(x,y-26,2.5,"#fff4c0")}`;
+ if(cam==1){o+=C(180,27,7,"#fff6df").replace("/>",' stroke="#25303a" stroke-width="1.2"/>')+'<path d="M180 27V22M180 27L184 29" stroke-width="1.3"/>'
+  +[[110,78],[250,78],[110,138],[250,138]].map(([x,y])=>`<circle class="glow" cx="${x}" cy="${y}" r="46" fill="#ffd98a" fill-opacity=".30" stroke="none"/>`).join("")
+  +`<g transform="translate(328 180)"><ellipse cx="0" cy="-4" rx="9" ry="5" fill="#e08a3c"/>${C(9,-8,4.5,"#e08a3c")}<polygon points="6,-12 8,-17 10,-12" fill="#e08a3c"/><polygon points="10,-12 12,-17 14,-12" fill="#e08a3c"/><path d="M-9 -5Q-16 -8 -13 -15" fill="none" stroke="#e08a3c" stroke-width="2.4"><animateTransform attributeName="transform" type="rotate" values="0 -9 -5;22 -9 -5;0 -9 -5" dur="1.6s" repeatCount="indefinite"/></path></g>`
+  +R(22,168,8,8,"#a4543a",1)+C(26,164,6,"#4f9d63")+C(22,167,4,"#6bb86f")}
+ else if(cam==2){o+=lamp(60,108)+lamp(300,108)+R(196,86,44,3,"#25303a")+R(198,89,3,18,"#25303a")+R(235,89,3,18,"#25303a")+R(200,92,32,14,"#bcd6e6",1).replace("/>",' opacity=".7"/>')+R(214,76,16,9,"#2f7f8f",2)+T0(222,83,"🚌",8)}
+ else if(cam==3){o+='<path d="M46 40Q180 62 314 40" fill="none" stroke-width="1"/>'+[0,1,2,3,4,5,6,7,8].map(i=>{const t=i/8,x=(1-t)**2*46+2*(1-t)*t*180+t*t*314,y=(1-t)**2*40+2*(1-t)*t*62+t*t*40;return C(x,y+1,2,"#ffe27a")+`<circle class="glow" cx="${x}" cy="${y+1}" r="8" fill="#ffe27a" fill-opacity=".55" stroke="none"/>`}).join("")
+  +[0,1,2,3].map(i=>`<rect class="glow" x="${48+i*68}" y="45" width="60" height="16" rx="4" fill="#ffd25a" fill-opacity=".5" stroke="none"/>`).join("")+lamp(26,148)+lamp(342,148)}
+ else if(cam==4){o+=`<g><animateTransform attributeName="transform" type="translate" from="-30 0" to="390 0" dur="26s" repeatCount="indefinite"/><path d="M0 181h16l-3 5H3z" fill="#fff"/><path d="M8 181V172l6 8z" fill="#e6a82c"/></g>`+(si()==0?'<rect width="360" height="190" fill="#fff" opacity=".24" stroke="none" pointer-events="none"/>':"")}
+ return o}
+function camSVG(){
+ const T0=(x,y,t,sz,ex)=>`<text x="${x}" y="${y}" font-size="${sz||10}" stroke="none" ${ex||""}>${t}</text>`,
+       SK=["#f3cbb2","#e5b592","#c9946e"],
+       CL=["#d9534f","#3b82f6","#10b981","#f59e0b","#8b5cf6"];
+
+ const man=(x,y,c,pose,i)=>{
+  const sk=SK[i%3],hair=["#2d241e","#5c3a21","#d49b35","#1e293b"][i%4];
+  let g;
+  if(pose=="sleep"){
+   g=R(x+2,y-8,24,7,c,3)+C(x,y-5,5,sk)+`<path d="M${x-4} ${y-7}Q${x} ${y-11} ${x+4} ${y-7}" fill="${hair}" stroke="none"/>`;
+  } else if(pose=="sit"){
+   g=R(x-5,y-19,10,14,c,3)+C(x,y-24,5,sk)+`<path d="M${x-5} ${y-25}Q${x} ${y-30} ${x+5} ${y-25}" fill="${hair}" stroke="none"/>`+R(x-4,y-7,16,5,"#334155",2)+R(x+9,y-5,4,8,"#334155",1.5);
+  } else {
+   g=`<ellipse cx="${x}" cy="${y+1}" rx="6" ry="2" fill="#000" opacity=".2" stroke="none"/>`
+    +R(x-3.5,y-9,3,9,"#334155",1.5)+R(x+.5,y-9,3,9,"#334155",1.5)
+    +R(x-4.5,y-20,9,13,c,3)
+    +C(x,y-25,5,sk)
+    +`<path d="M${x-5} ${y-26}Q${x} ${y-31} ${x+5} ${y-26}" fill="${hair}" stroke="none"/>`;
+  }
+  return pose=="run"||pose=="cook"?`<g>${g}<animateTransform attributeName="transform" type="translate" values="0 0;0 -2.5;0 0" dur="${pose=="run"?".5":"1.1"}s" repeatCount="indefinite"/></g>`:g;
+ };
+
+ let b="";
+
+ if(cam==1){
+  const occ=Math.min(1,S.pop/Math.max(1,capac())),n=S.pop?Math.max(1,Math.round(occ*4)):0,order=[3,1,2,0],has=r=>order.indexOf(r)<n;
+  const sign=(x,y)=>R(x,y,58,16,"#fffbeb",4,'stroke="#b45309" stroke-width="1.2"')+T0(x+29,y+11,"СДАЁТСЯ",8,'text-anchor="middle" fill="#b45309" font-weight="700"');
+  b=`<defs>
+   <linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#bae6fd"/></linearGradient>
+   <linearGradient id="roof1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b91c1c"/><stop offset="1" stop-color="#7f1d1d"/></linearGradient>
+  </defs>
+  <rect width="360" height="190" fill="url(#sky1)" stroke="none"/>
+  <g fill="#fff" opacity=".8" stroke="none"><circle cx="45" cy="28" r="10"/><circle cx="57" cy="26" r="13"/><circle cx="70" cy="29" r="9"/><circle cx="295" cy="22" r="11"/><circle cx="310" cy="24" r="14"/></g>
+  <path d="M0 165Q90 156 180 163T360 160V190H0Z" fill="#4d7c0f" stroke="none"/>
+  <rect y="168" width="360" height="22" fill="#65a30d" stroke="none"/>
+  ${C(20,155,18,"#15803d")}${C(14,148,12,"#22c55e")}${C(342,152,20,"#15803d")}${C(334,145,13,"#22c55e")}
+  ${R(235,12,16,28,"#78350f")}
+  <circle cx="243" cy="8" r="4" fill="#fff" opacity=".6" stroke="none"><animate attributeName="cy" values="8;-6" dur="2.5s" repeatCount="indefinite"/><animate attributeName="opacity" values=".6;0" dur="2.5s" repeatCount="indefinite"/></circle>
+  ${P("24,48 180,6 336,48","url(#roof1)")}
+  ${P("36,48 180,12 324,48","#fef3c7")}
+  ${R(40,48,280,122,"#fef9c3")}
+  ${R(44,52,134,50,"#e0f2fe",2)}
+  ${R(182,52,134,50,"#ffedd5",2)}
+  ${R(44,107,134,59,"#ede9fe",2)}
+  ${R(182,107,134,59,"#dcfce7",2)}
+  ${R(40,102,280,5,"#78350f")}
+  ${R(178,48,4,122,"#78350f")}
+  ${R(36,166,288,6,"#57534e",2)}
+  ${R(54,58,34,26,"#7dd3fc",2)}${R(70,58,2,26,"#fff")}${R(54,70,34,2,"#fff")}
+  ${R(272,58,34,26,"#7dd3fc",2)}${R(288,58,2,26,"#fff")}${R(272,70,34,2,"#fff")}
+  ${R(136,115,32,24,"#7dd3fc",2)}${R(151,115,2,24,"#fff")}${R(136,126,32,2,"#fff")}
+  ${R(52,95,52,5,"#334155",2)}${R(54,82,4,13,"#475569")}${R(98,78,3,17,"#475569")}
+  ${R(125,92,40,6,"#64748b",2)}${R(130,84,3,8,"#334155")}${R(158,84,3,8,"#334155")}${R(122,82,44,2.5,"#94a3b8")}
+  ${has(0)?man(78,95,CL[0],"run",0):sign(106,62)}
+  ${R(192,88,48,14,"#2563eb",4)}${R(192,79,48,11,"#1d4ed8",4)}${R(196,84,10,6,"#60a5fa",2)}
+  ${R(252,72,2,30,"#78350f")}${P("247,72 259,72 256,64 250,64","#fde047")}
+  ${R(272,88,36,14,"#92400e",2)}${R(276,68,28,18,"#0f172a",2)}
+  <rect x="278" y="70" width="24" height="14" fill="#38bdf8" stroke="none"><animate attributeName="fill" values="#38bdf8;#fbbf24;#34d399;#38bdf8" dur="3.2s" repeatCount="indefinite"/></rect>
+  ${has(1)?man(216,100,CL[1],"sit",1):sign(212,56)}
+  ${R(50,150,78,15,"#93c5fd",3)}${R(50,140,8,25,"#78350f",2)}${R(58,144,20,8,"#fff",4)}${R(76,149,52,16,"#3b82f6",3)}
+  ${R(136,148,26,17,"#92400e",2)}${C(149,144,4,"#f59e0b")}
+  ${has(2)?man(62,149,CL[2],"sleep",2)+`<text x="84" y="138" font-size="11" fill="#4f46e5" font-weight="700" stroke="none">z<animate attributeName="y" values="142;124" dur="2.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="2.2s" repeatCount="indefinite"/></text>`:sign(96,120)}
+  ${R(246,140,66,25,"#b45309",2)}${R(246,138,66,3,"#e2e8f0")}
+  ${R(254,126,18,12,"#cbd5e1",2)}${R(258,112,10,8,"#94a3b8")}
+  ${R(192,152,32,13,"#92400e",2)}${R(186,154,6,11,"#78350f")}${R(224,154,6,11,"#78350f")}
+  ${has(3)?man(236,165,CL[3],"cook",3)+`<path d="M263 124q-4-7 0-13" fill="none" stroke="#fff" stroke-width="1.8"><animate attributeName="opacity" values="0;.9;0" dur="1.8s" repeatCount="indefinite"/></path>`:sign(224,116)}`;
+ }
+
+ else if(cam==2){
+  const drawVeh=(type,y,dir,dur,del)=>{
+   const sc=y<140?.78:1;
+   let body="";
+   if(type=="bus"){
+    body=R(0,-18,46,18,"#f59e0b",3)+R(2,-18,42,4,"#d97706")+R(5,-13,8,7,"#bae6fd",1)+R(16,-13,8,7,"#bae6fd",1)+R(27,-13,8,7,"#bae6fd",1)+R(38,-14,6,11,"#e0f2fe",1)+C(10,0,4,"#1e293b")+C(36,0,4,"#1e293b");
+   } else if(type=="taxi"){
+    body=R(0,-10,32,10,"#facc15",3)+R(6,-16,18,7,"#fef08a",2)+R(12,-19,6,3,"#1e293b",1)+C(7,0,3.2,"#1e293b")+C(25,0,3.2,"#1e293b");
+   } else {
+    const col=CL[(dur*3|0)%CL.length];
+    body=R(0,-10,30,10,col,3)+R(6,-16,16,7,"#bae6fd",2)+C(7,0,3.2,"#1e293b")+C(23,0,3.2,"#1e293b");
+   }
+   const flip=dir?`translate(0 ${y}) scale(${sc})`:`translate(35 ${y}) scale(-${sc} ${sc})`;
+   return `<g><animateTransform attributeName="transform" type="translate" from="${dir?-55:370} 0" to="${dir?370:-55} 0" dur="${dur}s" begin="-${del}s" repeatCount="indefinite"/><g transform="${flip}"><ellipse cx="18" cy="2" rx="18" ry="3" fill="#000" opacity=".25" stroke="none"/>${body}</g></g>`;
+  };
+
+  const list=[
+   ...Array(Math.min(4,fleetBus())).fill("bus"),
+   ...Array(Math.min(4,fleetCars())).fill("taxi"),
+   ...Array(Math.min(4,1+S.lvl)).fill("car")
+  ];
+  let v="";
+  list.forEach((t,i)=>{
+   const dir=i%2===0;
+   v+=drawVeh(t,dir?162:133,dir,6.5+i*1.4,i*2.1);
+  });
+
+  b=`<defs>
+   <linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#e0f2fe"/></linearGradient>
+   <linearGradient id="road2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#475569"/><stop offset="1" stop-color="#1e293b"/></linearGradient>
+  </defs>
+  <rect width="360" height="190" fill="url(#sky2)" stroke="none"/>
+  ${C(305,32,14,"#fde047")}
+  ${P("-10,82 65,24 145,82","#64748b")}${P("48,37 65,24 84,37","#f8fafc")}
+  ${P("95,82 195,16 295,82","#475569")}${P("172,31 195,16 218,31","#f8fafc")}
+  ${P("240,82 325,30 380,82","#64748b")}${P("308,40 325,30 342,40","#f8fafc")}
+  <path d="M0 76Q90 64 180 74T360 70V110H0Z" fill="#4d7c0f" stroke="none"/>
+  <rect y="78" width="360" height="32" fill="#65a30d" stroke="none"/>
+  ${[22,58,110,165,230,285,335].map((tx,idx)=>P(`${tx-7},92 ${tx},72 ${tx+7},92`,"#15803d")+P(`${tx-5},84 ${tx},67 ${tx+5},84`,"#16a34a")).join("")}
+  ${R(0,96,360,4,"#cbd5e1")}
+  ${R(0,100,360,12,"#94a3b8")}
+  <rect y="112" width="360" height="78" fill="url(#road2)" stroke="none"/>
+  <line x1="0" y1="112" x2="360" y2="112" stroke="#f8fafc" stroke-width="1.5"/>
+  <line x1="0" y1="146" x2="360" y2="146" stroke="#facc15" stroke-width="2" stroke-dasharray="16 12"/>
+  <line x1="0" y1="184" x2="360" y2="184" stroke="#f8fafc" stroke-width="2"/>
+  ${v}
+  ${S.road==1?'<ellipse cx="160" cy="168" rx="22" ry="6" fill="#0f172a"/>'+T0(146,156,"🚧",18):S.road==2?R(110,148,140,20,"#0f172a",6)+T0(180,161,"🚧 ремонт дороги",11,'text-anchor="middle" fill="#fde047" font-weight="700"'):""}`;
+ }
+
+ else if(cam==3){
+  const have=Object.keys(SHOP).filter(k=>cnt(k)),slots=[0,1,2,3].map(i=>have[i]||null),sx=i=>22+i*81;
+  b=`<defs>
+   <linearGradient id="sky3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#bae6fd"/></linearGradient>
+   <linearGradient id="glass3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e0f2fe"/><stop offset=".5" stop-color="#bae6fd"/><stop offset="1" stop-color="#7dd3fc"/></linearGradient>
+  </defs>
+  <rect width="360" height="190" fill="url(#sky3)" stroke="none"/>
+  ${R(10,24,45,116,"#94a3b8")}${R(125,16,55,124,"#cbd5e1")}${R(260,20,65,120,"#94a3b8")}
+  ${slots.map((k,i)=>{
+   const x=sx(i),[nm,col,wall]=k?SHOP[k]:["СДАЁТСЯ","#64748b","#e2e8f0"];
+   return `<g>
+    ${R(x,38,75,104,wall,3)}
+    ${R(x,38,75,8,col,2)}
+    ${R(x+5,49,65,16,"#1e293b",4)}
+    ${T0(x+37.5,60,nm,nm.length>9?6.8:8,'text-anchor="middle" fill="#fde047" font-weight="700"')}
+    ${P(`${x-2},68 ${x+77},68 ${x+73},80 ${x+2},80`,col)}
+    ${[0,1,2,3].map(st=>R(x+6+st*18,68,9,12,"#fff",0,'opacity=".28" stroke="none"')).join("")}
+    ${R(x+7,85,38,44,k?"url(#glass3)":"#94a3b8",2)}
+    ${k?P(`${x+10},88 ${x+22},88 ${x+12},126 ${x+10},126`,"#fff",'opacity=".45" stroke="none"')
+      +R(x+11,112,9,12,col,1)+R(x+23,110,10,14,"#f59e0b",1)+R(x+16,96,12,10,"#ef4444",1)+R(x+9,124,34,3,"#78350f")
+      :T0(x+26,110,"АРЕНДА",7,'text-anchor="middle" fill="#475569" font-weight="700"')}
+    ${R(x+50,86,18,56,"#78350f",2)}${R(x+53,90,12,24,"#bae6fd",1)}${C(x+64,116,1.8,"#facc15")}
+   </g>`;
+  }).join("")}
+  ${have.length>4?R(276,10,76,18,"#1e293b",9)+T0(314,22,"ещё +"+(have.length-4)+" точек",9,'text-anchor="middle" fill="#fff" font-weight="700"'):""}
+  ${R(0,142,360,20,"#cbd5e1")}
+  ${[18,100,182,264,342].map(lx=>`<path d="M${lx} 142V116" stroke="#334155" stroke-width="2"/>${C(lx,114,4,"#fef08a")}`).join("")}
+  ${R(0,162,360,28,"#334155")}
+  <path d="M0 176H360" stroke="#f8fafc" stroke-width="1.5" stroke-dasharray="14 10"/>
+  ${Array.from({length:Math.min(8,Math.max(1,Math.ceil(S.pop/35)))},(_,i)=>`<g><animateTransform attributeName="transform" type="translate" from="${i%2?380:-20} 0" to="${i%2?-20:380} 0" dur="${10+i*1.4}s" begin="-${i*2.5}s" repeatCount="indefinite"/>${man(0,158,CL[i%5],"run",i)}</g>`).join("")}
+  ${cnt("taxi")?`<g><animateTransform attributeName="transform" type="translate" from="-50 0" to="400 0" dur="8.5s" repeatCount="indefinite"/>${R(0,170,36,10,"#facc15",3)+R(7,164,18,7,"#fef08a",2)+C(8,181,3.5,"#1e293b")+C(28,181,3.5,"#1e293b")}</g>`:""}`;
+ }
+
+ else{
+  const cells=[];for(const[k,c]of Object.entries(S.b))for(let i=0;i<c;i++)cells.push(k);for(let i=0;i<S.plots;i++)cells.push("lot");
+  const total=Math.max(1,Math.min(12,ns())),rows=Math.min(5,total),first=Math.max(0,Math.min(total-rows,sel-2)),rh=Math.floor(156/rows),
+        RF=["#dc2626","#2563eb","#d97706","#7c3aed"],
+        tree=(x,y,r)=>C(x+1.5,y+2,r,"#14532d",'opacity=".3"')+C(x,y,r,"#15803d")+C(x-r*.3,y-r*.3,r*.55,"#22c55e");
+
+  b=`<defs>
+   <linearGradient id="grass4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#65a30d"/><stop offset="1" stop-color="#4d7c0f"/></linearGradient>
+   <linearGradient id="river4" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0284c7"/><stop offset=".5" stop-color="#38bdf8"/><stop offset="1" stop-color="#0284c7"/></linearGradient>
+  </defs>
+  <rect width="360" height="190" fill="url(#grass4)" stroke="none"/>
+  <path d="M0 176Q90 166 180 175T360 170V190H0Z" fill="url(#river4)" stroke="none"/>
+  <path d="M0 176Q90 166 180 175T360 170" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+  ${R(164,168,32,22,"#94a3b8",2)}
+  `;
+  for(let j=0;j<rows;j++){
+   const r=first+j,y=24+j*rh,h=Math.min(22,rh-14),ry=y+h+3;
+   b+=(r==sel?`<rect x="28" y="${y-3}" width="304" height="${rh-1}" rx="6" fill="#fef08a" opacity=".45" stroke="#f59e0b" stroke-width="1.5"/>`:"")
+    +R(0,ry,360,10,"#334155")
+    +`<path d="M0 ${ry+5}H360" stroke="#f8fafc" stroke-width=".9" stroke-dasharray="8 6"/>`
+    +[0,1,2].map(z=>R(172,ry+2+z*2.5,16,1.2,"#fff",0,'stroke="none"')).join("")
+    +`<g><animateTransform attributeName="transform" type="translate" from="${j%2?350:-20} 0" to="${j%2?-20:350} 0" dur="${8+j*1.8}s" repeatCount="indefinite"/>${R(0,ry+1.5,11,6,RF[j%4],2)}</g>`;
+
+   for(let c=0;c<12;c++){
+    const k=cells[r*12+c],x=36+c*24;
+    if(!k){
+     b+=tree(x+10,y+h/2+1,5.5);
+    } else if(k=="lot"){
+     b+=R(x,y+2,20,h-2,"#fef3c7",3,'opacity=".7" stroke="#b45309" stroke-dasharray="3 2"');
+    } else if(k=="park"){
+     b+=R(x,y+1,20,h,"#86efac",4)+tree(x+6,y+h/2,4.5)+tree(x+14,y+h/2+1,4)+C(x+10,y+h-4,3,"#38bdf8");
+    } else if(k=="house"){
+     b+=R(x+1.5,y+5,20,h-3,"#000",2,'opacity=".25" stroke="none"')
+       +R(x,y+3,20,h-3,RF[(r+c)%4],2)
+       +R(x+10,y+3,10,h-3,"#000",1,'opacity=".18" stroke="none"')
+       +`<path d="M${x+10} ${y+3}V${y+h}" stroke="#1e293b" stroke-width=".9"/>`
+       +R(x+14,y+1,3.5,4,"#78350f");
+    } else {
+     const roofCol=SHOP[k]?SHOP[k][1]:"#47597a";
+     b+=R(x+2,y+2,20,h+1,"#000",3,'opacity=".25" stroke="none"')
+       +R(x,y,20,h+1,"#cbd5e1",3)
+       +R(x+2,y+2,16,Math.max(6,(h-4)/2),roofCol,1.5)
+       +T0(x+10,y+h-2.5,(B[k]?B[k][1]:"?")[0],8,'text-anchor="middle" fill="#1e293b" font-weight="700"');
+    }
+   }
+  }
+ }
+ return`<svg viewBox="0 0 360 190" stroke="#25303a" stroke-width="1.2" stroke-linejoin="round" id="cs" style="width:100%;display:block">${b}${fxSVG()}${camExtra()}`;
+}
+
+const today=()=>new Date().toISOString().slice(0,10);
+function dlNext(){const d=S.dl||{last:"",streak:0};if(d.last===today())return null;const y=new Date(Date.now()-864e5).toISOString().slice(0,10),st=d.last===y?d.streak+1:1;return{st,bonus:Math.trunc(2e4*(1+S.lvl*3)*Math.min(st,7))}}
+function extraSheets(){if(S.event!==null)return"";const dn=dlNext();
+ if(S.lvl>=5&&!S.won)return`<div class="sheet"><div class="card"><h2>🏆 Победа!</h2>Твой город стал мегаполисом на ${S.day}-й день.<div class="row" style="margin-top:8px"><span>Жителей</span><b>${fmt(S.pop)}</b></div><div class="row"><span>Капитал</span><b>${fmt(nw())} ₽</b></div><div class="row"><span>Достижений</span><b>${Object.keys(S.ach||{}).length}/${AC.length}</b></div><button class="main" onclick="A('won')" style="margin-top:12px">▶️ Продолжить играть</button><button onclick="A('reset')">🔄 Начать новую игру</button></div></div>`;
+ if(dn&&S.day>=2)return`<div class="sheet"><div class="card"><h2>🎁 Ежедневный бонус</h2>Заходи каждый день: чем длиннее серия (до 7 дней), тем больше награда.<div class="row" style="margin-top:8px"><span>Серия</span><b>${dn.st} дн.</b></div><div class="row"><span>Награда</span><b class="good">+${fmt(dn.bonus)} ₽</b></div><button class="main" onclick="A('daily')" style="margin-top:12px">Забрать</button></div></div>`;return""}
+function statsCard(){const h=S.nwh||[],cur=nw(),first=h.length?h[0]:cur,avg=S.rev.length?S.rev.reduce((a,b)=>a+b,0)/S.rev.length:0,row=(a,b,c)=>`<div class="row"><span>${a}</span><b${c?` class="${c}"`:""}>${b}</b></div>`;
+ return`<div class="card"><h2>📊 Статистика</h2>${h.length>1?spark(h,cur>=first):'<span class="mute">График капитала появится через пару дней.</span>'}${row("Капитал сейчас",fmt(cur)+" ₽")}${row("Изменение за "+h.length+" дн.",(cur>=first?"+":"−")+fmt(Math.abs(cur-first))+" ₽",cur>=first?"good":"bad")}${row("Казна",fmt(S.money)+" ₽")}${row("Имущество и участки",fmt(cur-S.money-bankVal()+debt())+" ₽")}${row("Вклады и активы",fmt(bankVal())+" ₽")}${row("Долги","−"+fmt(debt())+" ₽",debt()?"bad":"")}${row("Выручка в среднем",fmt(avg)+" ₽/день")}${row("Жителей · улиц · построек",fmt(S.pop)+" · "+ns()+" · "+Object.values(S.b).reduce((a,b)=>a+b,0))}</div>`}
+const settingsCard=()=>`<div class="card"><h2>⚙️ Настройки</h2><button onclick="A('vib')" style="width:100%">${S.set&&S.set.vib===0?"📳 Вибрация: выкл":"📳 Вибрация: вкл"}</button><button onclick="A('snd')" style="width:100%;margin-top:8px">${S.set&&S.set.snd===0?"🔇 Звук: выкл":"🔊 Звук: вкл"}</button></div>`;
+const tl=k=>(S.team&&S.team[k])||0,TEAM=[["mayor","👔 Мэр","+4% налогов и +2 к настроению за уровень"],["eng","🛠 Главный инженер","−5% цены построек и −10% счетов за свет, воду и газ за уровень"],["banker","💼 Банкир","+1,5% к ставкам по счёту и вкладам за уровень"]];
+const teamSal=()=>TEAM.reduce((a,r)=>a+tl(r[0])*8e3*(1+S.lvl*2),0),hireCost=k=>Math.trunc(1e6*(tl(k)+1)*(1+S.lvl*3)*(1+S.day/1000)),engD=()=>1-.05*tl("eng"),br=()=>.015*tl("banker");
+function teamCard(){return`<div class="card"><h2>👥 Команда города</h2><span class="mute">Каждый уровень стоит денег сразу и зарплату каждый день. Максимум 3 уровня.</span>${TEAM.map(([k,n,d])=>`<div style="margin-top:10px"><div class="row"><b>${n} · ур. ${tl(k)}/3</b><span class="mute">${tl(k)?"зарплата "+fmt(tl(k)*8e3*(1+S.lvl*2))+" ₽/день":""}</span></div><span class="mute">${d}</span>${tl(k)<3?`<button style="width:100%;margin-top:6px" onclick="A('hire','${k}')">${tl(k)?"⬆️ Повысить":"➕ Нанять"} · ${fmt(hireCost(k))} ₽</button>`:'<div class="good">Максимальный уровень</div>'}</div>`).join("")}</div>`}
+const RIV=["Вечерний","Заречье","Новоград"],DIS=["Центр","Вокзал","Порт","Университет","Рынок"];
+function rivInit(){if(!S.rv)S.rv=RIV.map((n,i)=>({n,pop:12+i*3,c:1.2e6*(1+i*.3),l:0}));if(S.cups===undefined){S.cups=0;S.bw=0;S.bt=0;S.bl=null}}
+const rivRows=()=>(rivInit(),S.rv.map(r=>({n:r.n+" 🏙",l:r.l,p:Math.trunc(r.pop),c:Math.trunc(r.c)})));
+function rivTick(){rivInit();const g={easy:.8,normal:1,hard:1.2,nightmare:1.4}[S.diff]||1;for(const r of S.rv){r.pop=Math.max(5,r.pop*(1+(.004+Math.random()*.012)*g));if(r.pop<S.pop*.9)r.pop+=(S.pop*.9-r.pop)*.03;r.c*=1+(.003+Math.random()*.012)*g;const nw0=nw()*.6;if(r.c<nw0)r.c+=(nw0-r.c)*.03;r.l=LV.reduce((a,x,i)=>r.pop>=x[1]?i:a,0)}
+ if(S.day%7==0){const mine=hap()*.5+Math.min(30,cnt("school")*5+cnt("clinic")*5+cnt("park")*3+cnt("stadium")*8)+Math.random()*20,rv=S.rv[Math.floor(Math.random()*3)],opp=36+rv.l*6+Math.random()*50,d=DIS[Math.floor(Math.random()*DIS.length)];S.bt++;
+  if(mine>=opp){S.bw++;S.cups+=8;const rw=15e4*(1+S.lvl*4);S.money+=rw;S.mood+=3;S.bl=`🏆 Район «${d}»: победа над «${rv.n}» (+${fmt(rw)} ₽, +8 кубков)`}else{S.cups=Math.max(0,S.cups-4);S.mood-=3;S.bl=`⚔️ Район «${d}»: «${rv.n}» оказался сильнее (−4 кубка, настроение −3)`}L(S.bl);toast(S.bl)}}
+function battleCard(){rivInit();return`<div class="card"><h2>⚔️ Соседние города и бои за районы</h2><span class="mute">Раз в 7 дней бой за район. Побеждают города с высоким настроением и школами, больницами, парками, стадионами. Соседи растут тоже.</span><div class="row"><span>Кубков</span><b>${S.cups}</b></div><div class="row"><span>Побед</span><b>${S.bw} из ${S.bt}</b></div><div class="row"><span class="mute">Следующий бой</span><b>через ${7-S.day%7} дн.</b></div>${S.bl?`<div class="mute" style="margin-top:6px">${S.bl}</div>`:""}${S.rv.map(r=>`<div class="row"><span>${r.n}</span><span class="mute">${LV[r.l][0]} · ${fmt(Math.trunc(r.pop))} жит.</span></div>`).join("")}</div>`}
+const TUT=[["⚡ Выбери, что провести бабушке в первую очередь: свет или газ",()=>S.util.light||S.util.gas],["🏠 Построй ещё один дом (вкладка «Стройка»)",()=>cnt("house")>=2],["💧 Проведи воду (вкладка «Стройка», блок «Коммуникации»): без неё город не растёт",()=>S.util.water],["▶️ Открой день и посмотри, сколько зарабатывает город",()=>S.day>=3],["🛒 Построй магазин (нужен свет)",()=>cnt("shop")>=1],["💳 Положи деньги на накопительный счёт (вкладка «Казна»)",()=>S.sav&&S.sav.bal>0],["🎯 Загляни на «Ещё»: там цели, достижения, команда и бои за районы",()=>S.day>=6]];
+function tutCard(){if(S.tut===undefined||S.tut>=TUT.length)return"";while(S.tut<TUT.length&&TUT[S.tut][1]())S.tut++;
+ if(S.tut>=TUT.length){S.tut=99;S.money+=2e5;L("🧭 Обучение пройдено: +200 000 ₽");toast("🧭 Обучение пройдено! +200 000 ₽");return""}
+ return`<div class="card" style="border-color:var(--gold)"><h2>🧭 Обучение · шаг ${S.tut+1} из ${TUT.length}</h2>${TUT[S.tut][0]}<div class="bar"><i style="width:${S.tut/TUT.length*100}%"></i></div><button onclick="A('tutskip')" style="padding:6px 12px;font-size:12px">Пропустить обучение</button></div>`}
+let AUD;const snd=t=>{if(S&&S.set&&S.set.snd===0)return;try{AUD=AUD||new(window.AudioContext||window.webkitAudioContext)();const c=AUD,o=c.createOscillator(),g=c.createGain(),n=c.currentTime,f=t=="err"?[180,140]:t=="tick"?[520]:[660,880];o.type="triangle";o.connect(g);g.connect(c.destination);o.frequency.setValueAtTime(f[0],n);if(f[1])o.frequency.setValueAtTime(f[1],n+.07);g.gain.setValueAtTime(.06,n);g.gain.exponentialRampToValueAtTime(.001,n+.16);o.start(n);o.stop(n+.17)}catch(e){}};
+function hints(f){const a=[],c=capac();if(!S.util.light||!S.util.water)a.push("🔌 Нет "+[!S.util.light&&"света",!S.util.water&&"воды"].filter(Boolean).join(" и ")+": новые жители не приедут, настроение ниже. Проведи на вкладке «Стройка».");if(S.later!=null)a.push("⏳ Отложено на 1 день: "+EV[S.later][0]);
+ if(S.pop>=c)a.push(`🏠 Жителей ${S.pop}, мест ${c}: новые люди не приедут. Построй дом (${sh(cost("house"))} ₽)${S.plots<1?" — сначала купи участок на вкладке «Земля»":""}.`);
+ else if(S.plots<1)a.push("🗺 Нет свободных участков — купи на вкладке «Земля».");
+ if(f.h<45)a.push("😊 Настроение низкое — доходы падают. Построй парк или школу, или снизь налог.");
+ if(S.money>2e5*(1+S.lvl*5)&&!(S.sav&&S.sav.bal>0)&&!(S.deps&&S.deps.length))a.push("💡 У тебя "+sh(S.money)+" ₽ лежит без дела. Положи часть на накопительный счёт (8% годовых): вкладка «Казна».");
+ if(S.loans.length&&S.money>debt()*1.5)a.push("🏦 Денег хватает, чтобы закрыть кредиты досрочно и не платить проценты: вкладка «Счета».");
+ if(S.road==1)a.push("🚧 Дорога разбита: настроение −5, пока не починишь.");
+ return `<div class="card note"><h2>💡 Что делать</h2>${a.join("<br>")||"Всё в порядке — копи на следующую стройку."}${S.road==1?'<button style="width:100%;margin-top:8px" onclick="A(&quot;road&quot;)">🚧 Починить дорогу (−120 000 ₽)</button>':""}<div class="mute" style="margin-top:6px">Построено: ${Object.entries(S.b).map(([k,n])=>B[k][0]+" "+n).join(" · ")} (на картинке до 6 каждого вида)</div></div>`}
+
+function scene(){const front=mk(FRONT);for(let i=0;i<Math.min(S.plots,4);i++)front.push(["lot",i]);
+ const nP=Math.min(10,Math.ceil(Math.log10(S.pop+1)*3)),nC=Math.min(3,1+(S.lvl>>1));
+ let ppl="",cars="",lamps="";
+ for(let i=0;i<nP;i++)ppl+=`<g class="pp" style="--d:${24+i*4}s;animation-delay:-${i*6}s"><g transform="translate(0 164)">${R(-3,0,6,8,RC[i%4],2)+C(0,-3,4.2,["#f0c9a0","#e2b48a","#c99872"][i%3])+C(-1.5,-3.5,.8,"#25303a")+C(1.5,-3.5,.8,"#25303a")}</g></g>`;
+ for(let i=0;i<nC;i++)cars+=`<g class="car" style="--d:${10+i*4}s;animation-delay:-${i*5}s"><g transform="translate(0 ${i%2?186:179})">${R(0,-8,26,8,RC[(i+1)%4],3)+R(6,-14,13,7,"#cfe6f2",2)+C(6,0,3,"#25303a")+C(20,0,3,"#25303a")}</g></g>`;
+ for(let i=0;i<6;i++){const x=30+i*60;lamps+=`<path d="M${x} 162V146"/>${R(x-3,143,6,4,"#25303a")}<circle class="glow" cx="${x}" cy="150" r="12" fill="#ffe27a" stroke="none"/>`}
+ let st="";for(let i=0;i<22;i++)st+=C((i*53%350)+5,(i*31%70)+6,1,"#fff");
+ return`<svg id="sc" viewBox="0 0 360 190" role="img" aria-label="Твой город" class="${S.run?"":"idle"}" style="--win:#a9d6ee;--sp:${S.speed}" stroke="#25303a" stroke-width="1.6" stroke-linejoin="round">
+<defs>
+ <linearGradient id="hz" x1="0" y1="0" x2="0" y2="1"><stop offset=".4" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".45"/></linearGradient>
+ <linearGradient id="gr0" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fc07e"/><stop offset="1" stop-color="#6fa360"/></linearGradient>
+</defs>
+<rect id="sky" width="360" height="190" fill="#8fcdf0" stroke="none"/><rect width="360" height="190" fill="url(#hz)" stroke="none"/><g id="stars" opacity="0">${st}</g>
+<g id="sun"><circle r="13" fill="#ffd25a" stroke="none"/><circle r="18" fill="#ffd25a" opacity=".25" stroke="none"/></g>
+<g id="moon" opacity="0"><circle r="10" fill="#f4f1e0" stroke="none"/><circle cx="-3" cy="2" r="2" fill="#d8d4c0" stroke="none"/></g>
+<g fill="#fff" stroke="none" opacity=".9"><g class="cl" style="animation-duration:80s;animation-delay:-20s"><ellipse cx="0" cy="34" rx="22" ry="7"/><ellipse cx="14" cy="29" rx="14" ry="8"/></g><g class="cl" style="animation-duration:110s;animation-delay:-70s"><ellipse cx="0" cy="55" rx="18" ry="6"/><ellipse cx="10" cy="51" rx="11" ry="6"/></g></g>
+<path d="M0 112L40 72L72 100L112 62L160 106L210 76L262 110L312 68L360 102V132H0Z" fill="#9fb2cc" stroke="none"/>
+<path d="M0 120Q60 92 120 114T250 110T360 118V190H0Z" fill="#7fae78" stroke="none"/>
+<rect y="124" width="360" height="66" fill="url(#gr0)" stroke="none"/>
+${row(mk(BACK),128,.85)}${row(front,158,1)}
+<rect y="162" width="360" height="28" fill="#3f4954" stroke="none"/><rect y="161" width="360" height="2.5" fill="#25303a" stroke="none"/><line x1="0" x2="360" y1="176" y2="176" stroke="#f1e8d4" stroke-width="2" stroke-dasharray="14 10"/>
+${cars}${lamps}${ppl}${utilSVG()}${roadSVG()}<rect id="shade" width="360" height="190" fill="#0b1633" opacity="0" stroke="none" pointer-events="none"/></svg>`}
+
+const SK=[[0,"#f2b27a",.3],[.1,"#8fcdf0",0],[.42,"#7ec3ee",0],[.5,"#f0885a",.15],[.58,"#35467a",.8],[.75,"#16203f",1],[.93,"#2b3b6b",.8],[1,"#f2b27a",.3]];
+function sky(p){let i=0;while(i<SK.length-2&&p>SK[i+1][0])i++;const[a,ca,na]=SK[i],[b,cb,nb]=SK[i+1],k=(p-a)/(b-a),h=c=>[1,3,5].map(j=>parseInt(c.substr(j,2),16)),x=h(ca),y=h(cb);
+ return["rgb("+x.map((v,j)=>Math.round(v+(y[j]-v)*k)).join(",")+")",na+(nb-na)*k]}
+function paint(){if(!S)return;const pv=S.run?S.p:.1,b=$("dbtn");
+ if(b&&S.run)b.style.setProperty("--p",S.p*100+"%");const b2=$("dbtn2");if(b2&&S.run)b2.style.setProperty("--p",S.p*100+"%");
+ const lv=$("live");if(lv&&S.run)lv.textContent="+"+fmt(S.dayInc*S.p)+" ₽";
+ const dp=$("dp");if(dp)dp.style.width=(S.run?S.p*100:0)+"%";
+ const c=$("clk");if(c){if(S.run){const h=(6+pv*24)%24;c.textContent=String(Math.floor(h)).padStart(2,"0")+":"+String(Math.floor(h%1*60)).padStart(2,"0")}else c.textContent="утро"}
+ const ct=$("ctint");if(ct)ct.setAttribute("opacity",(sky(pv)[1]*.45).toFixed(2));const cs=$("cs");if(cs)cs.style.setProperty("--gl",sky(pv)[1]>.5?.9:0);const sk=$("sky");if(!sk)return;const[col,n]=sky(pv);sk.setAttribute("fill",col);$("shade").setAttribute("opacity",(n*.42).toFixed(2));$("stars").setAttribute("opacity",Math.max(0,n*1.2-.2).toFixed(2));
+ const q=(pv%.5)/.5,x=30+q*300,y=100-Math.sin(Math.PI*q)*72,d=pv<.5;
+ $("sun").setAttribute("transform",`translate(${x} ${y})`);$("sun").setAttribute("opacity",d?1:0);$("moon").setAttribute("transform",`translate(${x} ${y})`);$("moon").setAttribute("opacity",d?0:1);
+ const sc=$("sc");sc.style.setProperty("--win",n>.5?"#ffe27a":"#a9d6ee");sc.style.setProperty("--gl",n>.5?.65:0)}
+let last=0,bid=0,BUB=[];
+const bHTML=(b,age)=>`<button class="bub" id="b${b.id}" style="left:${b.x}%;top:${b.y}%;animation-delay:-${age}s" onclick="tapB(${b.id})">💰 +${fmt(b.amt)}</button>`;
+function spawnB(){const b={id:++bid,x:6+Math.random()*72,y:14+Math.random()*34,amt:Math.max(1000,Math.round(S.dayInc*.04/100)*100),t0:performance.now()};BUB.push(b);const l=$("bl");if(l)l.insertAdjacentHTML("beforeend",bHTML(b,0))}
+function tapB(id){const b=BUB.find(x=>x.id==id);if(!b)return;BUB=BUB.filter(x=>x!==b);const e=$("b"+id);if(e)e.remove();S.money+=b.amt;S.bon=(S.bon||0)+b.amt;const m=$("mny");if(m)m.textContent=fmt(S.money);buzz();save()}
+function startDay(){const f=fc();S.run=true;S.p=0;S.bon=0;S.dayInc=Math.trunc(f.rent+f.comm+f.tax-f.int);S.sched=Array.from({length:6},()=>.08+Math.random()*.84).sort((a,b)=>a-b);S.si=0}
+function endDay(){playDay();S.p=0;S.run=false;BUB=[];save();if(S.auto&&S.event===null)startDay();render()}
+function frame(t){requestAnimationFrame(frame);const dt=Math.min(.5,(t-(last||t))/1000);last=t;
+ if(S&&S.run&&S.event===null&&!document.hidden){S.p+=dt*S.speed/DAY;while(S.si<S.sched.length&&S.p>=S.sched[S.si]){S.si++;spawnB()}if(S.p>=1){endDay();return}}
+ const now=performance.now();BUB=BUB.filter(b=>{if(now-b.t0>3600){const e=$("b"+b.id);if(e)e.remove();return false}return true});paint()}
+
+const DAY=20,$=id=>document.getElementById(id),app=$("app");
+function toast(t){clearTimeout(tt);let e=$("toast");if(!e){e=document.createElement("div");e.id="toast";e.className="toast";document.body.appendChild(e)}e.textContent=t;e.style.display="block";tt=setTimeout(()=>e.style.display="none",2200)}
+function buzz(){if(S&&S.set&&S.set.vib===0)return;try{tg&&tg.HapticFeedback.impactOccurred("light")}catch(e){}}
+function A(a,x){buzz();let err=null;
+ if(a=="ev"&&(S.event===null||(x!="later"&&!EV[S.event][1][x])))return;if(a=="repay"&&!S.loans[x])return;
+ if(a=="tab"){tab=x;window.scrollTo(0,0)}
+ else if(a=="spd")S.speed=x;else if(a=="day"){if(S.event!==null)err="Сначала реши событие";else if(!S.run)startDay()}else if(a=="auto"){S.auto=!S.auto;if(S.auto&&!S.run&&S.event===null)startDay()}
+ else if(a=="new"){S=newState(x);tab="city";L("🏡 Игра началась: "+DF[x].t);L("👵 В единственном доме живёт одна бабушка");S.event=14}
+ else if(a=="ev"&&x=="later"){S.later=S.event;S.event=null;toast("Отложено на день — построй дома")}
+ else if(a=="ev"){const o=EV[S.event][1][x],[,m,mo,p,pl]=o;if(S.money+m<0)err="Не хватает денег";else if(S.plots+pl<0)err="Не хватает участков";
+  else{S.money+=m;S.mood+=mo;S.plots+=pl;S.pop=Math.max(0,p>0?Math.min(S.pop+p,Math.max(S.pop,capac())):S.pop+p);if(o[5]){for(const k in o[5].b)S.b[k]=Math.max(0,cnt(k)+o[5].b[k]);S.pop=Math.min(S.pop,capac());if(o[5].u)S.util[o[5].u]=1;if(o[5].f){S.flags=S.flags||{};S.flags[o[5].f]=1}if(o[5].mp)S.money+=Math.trunc(Math.max(0,S.money)*o[5].mp);if(o[5].risk&&Math.random()<o[5].risk.p){S.money-=Math.trunc(Math.max(0,S.money)*o[5].risk.m);S.mood+=o[5].risk.mo;toast(o[5].risk.t)}if(o[5].t)toast(o[5].t)}if(S.event==5)S.road=x==0?2:1;if(S.event==EVEL)S.pledge=x==0?1:2;if(S.event==EVFEST&&x==0)S.fest={until:S.day+7,m:Math.min(.3,.06+attr()*.025)};L(`${EV[S.event][0].slice(0,2)} Решение: «${o[0]}»`);S.event=null;if(S.auto)startDay()}}
+ else if(a=="build"){const b=B[x];if(S.lvl<b[3])err="Ещё закрыто";else if(NL.includes(x)&&!S.util.light)err="Нужен свет — проведи электричество на вкладке «Стройка»";else{const n=qN(x),t=bCost(x,n);
+  if(n<1)err=S.plots<1?"Нет свободных участков — купи на вкладке «Земля»":"Не хватает денег";else if(S.plots<n)err=`Нужно участков: ${n}, свободно ${S.plots}. Докупи ${n-S.plots} на вкладке «Земля»`;else if(S.money<t)err=`Не хватает ${fmt(t-S.money)} ₽ (нужно ${fmt(t)} ₽)`;
+  else{S.money-=t;S.plots-=n;S.b[x]=cnt(x)+n;L(`🏗 Построено: ${b[1]} ×${n} (−${fmt(t)} ₽)`);toast(`Построено ×${n} за ${sh(t)} ₽`)}}}
+ else if(a=="upg"){const u=UPG.find(z=>z[0]==x),t=u[1],[n,c]=upCalc(x,t);if(S.lvl<B[t][3])err="Ещё закрыто";else if(t=="super"&&!S.util.light)err="Нужен свет";else if(n<1)err="Нечего улучшать или не хватает денег";else if(S.money<c)err=`Не хватает ${fmt(c-S.money)} ₽`;else{S.money-=c;S.b[x]-=n;S.b[t]=cnt(t)+n;L(`⬆️ ${B[x][1]} → ${B[t][1]} ×${n} (−${fmt(c)} ₽)`);toast(`⬆️ Улучшено: ${B[t][1]} ×${n}`)}}
+  else if(a=="ins"){S.ins=!S.ins;toast(S.ins?"🛡 Город застрахован":"Страховка отключена")}
+  else if(a=="buy"){const p=pPrice(),n=qN("plot"),t=n*p;if(n<1)err="Не хватает денег";else if(S.money<t)err=`Не хватает ${fmt(t-S.money)} ₽ (нужно ${fmt(t)} ₽)`;else{S.money-=t;S.plots+=n;L(`🗺 Куплено участков: ${n} (−${fmt(t)} ₽)`);toast(`Куплено участков: ${n}`)}}
+ else if(a=="sell"){const n=qty>0?Math.min(qty,S.plots):S.plots;if(n<1)err="Нет свободных участков";else{S.money+=n*pSell();S.plots-=n;L(`🗺 Продано участков: ${n} (+${fmt(n*pSell())} ₽)`);toast(`Продано участков: ${n}`)}}
+ else if(a=="q"){qty=x}
+ else if(a=="tax")S.tax=x;
+ else if(a=="loan")err=takeLoan(x);
+ else if(a=="repay"){const l=S.loans[x],c=early(l);if(S.money<c)err="Не хватает денег на досрочное погашение";else{S.money-=c;S.loans.splice(x,1);L(`✅ Кредит «${l.name}» погашен досрочно`)}}
+ else if(a=="road"){if(S.road!=1)err="Дорога уже в порядке";else if(S.money<12e4)err="Не хватает денег (120 000 ₽)";else{S.money-=12e4;S.road=2;L("🚧 Дорогу чинят за ночь (−120 000 ₽)");toast("Дорогу починят за ночь")}}
+ else if(a=="util"){const u=UT[x],c=utC(x);if(S.util[x])err="Уже проведено";else if(S.lvl<u[3])err="Ещё закрыто";else if(S.money<c)err="Не хватает денег";else{S.money-=c;S.util[x]=1;L(`${u[0]} Проведено: ${u[1]} (−${fmt(c)} ₽)`);toast(x=="light"?"⚡ Свет проведён: открылись магазины, отели и ночной рынок":"Проведено!")}}
+ else if(a=="card"){const o={n:myName(),l:S.lvl,p:S.pop,c:nw(),d:S.day},code="CITY:"+btoa(unescape(encodeURIComponent(JSON.stringify(o)))),txt=`Мой город: ${LV[S.lvl][0]}, ${fmt(S.pop)} жителей, капитал ${sh(nw())} ₽. Добавь меня в рейтинг (Ещё → Друг):\n`+code;
+  if(tg&&tg.openTelegramLink)tg.openTelegramLink("https://t.me/share/url?url=%20&text="+encodeURIComponent(txt));else{try{navigator.clipboard.writeText(txt).then(()=>toast("Визитка скопирована"),()=>prompt("Скопируй визитку:",txt))}catch(e){prompt("Скопируй визитку:",txt)}}}
+ else if(a=="addf"){const c=prompt("Вставь визитку друга (код начинается с CITY:)"),m=c&&c.match(/CITY:([A-Za-z0-9+\/=]+)/);if(m){try{const o=JSON.parse(decodeURIComponent(escape(atob(m[1]))));if(typeof o.n!="string"||!(o.l>=0&&o.l<LV.length)||!Number.isFinite(o.c)||!Number.isFinite(o.p))throw 0;const n=o.n.replace(/[<>&]/g,"").slice(0,20);S.friends=[...(S.friends||[]).filter(f=>f.n!=n),{n,l:o.l,p:o.p,c:o.c}].slice(0,20);toast("Друг добавлен: "+n)}catch(e){err="Визитка не подходит"}}else if(c)err="Не нашёл код CITY:"}
+ else if(a=="tar"){const[k,d]=x.split(":"),r=TR[k];if(r)T()[k]=Math.max(r[0],Math.min(r[1],T()[k]+ +d))}
+ else if(a=="cardon"){S.cardOn=!S.cardOn;toast(S.cardOn?"🎓 Карта оформлена":"Карта отключена")}
+ else if(a=="buyv"){const[kk,nn]=String(x).split(":"),bus=kk=="bus",cntN=Math.max(1,parseInt(nn)||1),room=vRoom(bus?"bus":"car"),tot=cntN*vc(bus?"bus":"car");if(!(bus?cnt("depot"):cnt("taxi")))err=bus?"Нужен автопарк":"Нужен таксопарк";else if(room<1)err="Парк полон — построй ещё один";else if(cntN>room)err=`В парке свободно только ${room} мест`;else if(S.money<tot)err=`Не хватает ${fmt(tot-S.money)} ₽ (нужно ${fmt(tot)} ₽)`;else{S.money-=tot;S[bus?"buses":"cars"]=(S[bus?"buses":"cars"]||0)+cntN;L(`${bus?"🚌":"🚕"} Куплено: ${cntN} шт. (−${fmt(tot)} ₽)`);toast(`${bus?"🚌 Автобусов":"🚕 Машин"} куплено: ${cntN}`)}}
+ else if(a=="prset"){const e=document.getElementById("pr_"+x),v=e?parseInt(String(e.value).replace(/\D/g,"")):NaN,r=TR[x];if(!r)return;if(!(v>0))err="Введи число — свою цену";else{T()[x]=Math.max(r[0],Math.min(r[1],v));if(v<r[0]||v>r[1])toast(`Цена ограничена: от ${r[0]} до ${r[1]} ₽`);else toast("Цена установлена: "+T()[x]+" ₽")}}
+ else if(a=="cam"){cam=x}
+ else if(a=="sel"){sel=x}
+ else if(a=="street"){if(ns()>=streetMax())err="Пока хватит улиц — расти до следующего уровня";else if(S.money<streetCost())err="Не хватает денег";else{S.money-=streetCost();S.streets=ns()+1;S.plots+=4;S.mood+=2;sel=ns()-1;L("🛣 Проложена улица «"+STN[ns()-1]+"»");toast("🛣 Новая улица: "+STN[ns()-1])}}
+ else if(a=="dsum"){dPct=x}
+ else if(a=="dep"){BK();const[dk,df]=String(x).split(":"),t=dp(dk),n=Math.trunc(pctAmt(df));if(!t)err="Нет такого вклада";else if(n<1e4)err="Минимум 10 000 ₽";else if(S.money<n)err=`Не хватает ${fmt(n-S.money)} ₽`;else if(S.deps.length>=6)err="Не больше 6 вкладов";else{S.money-=n;S.deps.push({k:dk,amt:n,start:S.day});L(`🏦 Вклад «${t[1]}»: ${fmt(n)} ₽`);toast("🏦 Вклад открыт")}}
+ else if(a=="pc"){const[k,v]=String(x).split(":");pc[k]=v=="c"?"c":+v}
+ else if(a=="sadd"){BK();const n=pctAmt(String(x||"s:c").split(":")[1]);if(n<1e3)err="Минимум 1 000 ₽";else if(S.money<n)err=`Не хватает ${fmt(n-S.money)} ₽`;else{S.money-=n;S.sav.bal+=n;L(`💳 На накопительный счёт: ${fmt(n)} ₽`);toast("Положено на счёт")}}
+ else if(a=="swd"){BK();const f=String(x).split(":")[1];let n=Math.trunc(String(f)[0]=="@"?Math.min(S.sav.bal,+String(f).slice(1)||0):f=="c"?Math.min(S.sav.bal,amt()):S.sav.bal*+f);if(!(n>=1))err="Нечего снимать";else{S.sav.bal=S.sav.bal-n<1?0:S.sav.bal-n;S.money+=n;L(`💳 Снято со счёта: ${fmt(n)} ₽`);toast(`Снято ${fmt(n)} ₽`)}}
+ else if(a=="wd"){BK();const[i,f]=String(x).split(":"),d=S.deps[+i];if(d){const full=depVal(d);let fr=f===undefined?1:f[0]=="@"?Math.min(1,(+f.slice(1)||0)/full):f=="c"?Math.min(1,amt()/full):+f;fr=Math.max(0,Math.min(1,fr||0));const v=Math.trunc(full*fr);if(v<1)err="Сумма слишком мала";else{S.money+=v;d.amt*=1-fr;if(fr>=1||d.amt<1)S.deps.splice(+i,1);L(`🏦 Со вклада снято ${fmt(v)} ₽`);toast(`Получено ${fmt(v)} ₽`)}}}
+ else if(a=="buyi"){BK();const[bk,bf]=String(x).split(":"),n=Math.trunc(pctAmt(bf));x=bk;if(!MK[x])err="Нет такого актива";else if(n<1e3)err="Минимум 1 000 ₽";else if(S.money<n)err=`Не хватает ${fmt(n-S.money)} ₽`;else{S.money-=n;S.hold[x]+=n*.995/S.mkt[x];S.cost[x]+=n;L(`📈 Куплено: ${MK[x][0]} на ${fmt(n)} ₽`);toast("Куплено")}}
+ else if(a=="selli"){BK();const[k,f]=String(x).split(":"),val=(S.hold[k]||0)*(S.mkt[k]||0)*.995;if(!(val>=1))err="Нечего продавать";else{let fr=String(f)[0]=="@"?Math.min(1,(+String(f).slice(1)||0)/val):f=="c"?Math.min(1,amt()/val):+f;fr=Math.max(0,Math.min(1,fr||0));const v=Math.trunc(val*fr);if(v<1)err="Сумма слишком мала";else{S.money+=v;S.cost[k]*=1-fr;S.hold[k]*=1-fr;L(`📉 Продано: ${MK[k][0]} на ${fmt(v)} ₽`);toast(`Продано на ${fmt(v)} ₽`)}}}
+ else if(a=="st"){BK();const n=Math.trunc(pctAmt(String(x||"s:c").split(":")[1]));if(S.su)err="Стартап уже вложен";else if(n<1e5)err="Минимум 100 000 ₽";else if(S.money<n)err=`Не хватает ${fmt(n-S.money)} ₽`;else{S.money-=n;S.su={amt:n,day:S.day};L(`🚀 Вложено в стартап: ${fmt(n)} ₽ на 60 дней`);toast("🚀 Деньги вложены")}}
+ else if(a=="daily"){const dn=dlNext();if(dn){S.money+=dn.bonus;S.dl={last:today(),streak:dn.st};L(`🎁 Ежедневный бонус: +${fmt(dn.bonus)} ₽ (серия ${dn.st} дн.)`);toast(`🎁 +${fmt(dn.bonus)} ₽`)}}
+ else if(a=="won"){S.won=true}
+ else if(a=="vib"){S.set=S.set||{};S.set.vib=S.set.vib===0?1:0;toast(S.set.vib?"Вибрация включена":"Вибрация выключена")}
+ else if(a=="hire"){const t=TEAM.find(r=>r[0]==x);if(!t)return;if(tl(x)>=3)err="Максимальный уровень";else if(S.money<hireCost(x))err=`Не хватает ${fmt(hireCost(x)-S.money)} ₽`;else{S.money-=hireCost(x);S.team=S.team||{};S.team[x]=tl(x)+1;L(`👥 ${t[1]}: уровень ${tl(x)}`);toast(`${t[1]} · ур. ${tl(x)}`)}}
+ else if(a=="tutskip"){S.tut=99}
+ else if(a=="snd"){S.set=S.set||{};S.set.snd=S.set.snd===0?1:0;toast(S.set.snd?"Звук включён":"Звук выключен")}
+ else if(a=="now"){save(true);toast("Сохранено")}
+ else if(a=="exp"){const c=btoa(unescape(encodeURIComponent(pack())));try{navigator.clipboard.writeText(c).then(()=>toast("Код скопирован"),()=>prompt("Скопируй код:",c))}catch(e){prompt("Скопируй код:",c)}}
+ else if(a=="imp"){const c=prompt("Вставь код сохранения");if(c){try{const o=JSON.parse(decodeURIComponent(escape(atob(c.trim()))));if(!o.diff)throw 0;S=o;fixS();tab="city";toast("Сохранение загружено")}catch(e){err="Код не подходит"}}}
+ else if(a=="reset"){if(confirm("Начать заново? Весь прогресс пропадёт.")){S=null;save();render();return}}
+ if(err)toast(err);else if(a!="tab")save();if(S)achTick();snd(err?"err":a=="tab"?"tick":"ok");render()}
+const TABS=[["city","🏘","Город"],["build","🏗","Стройка"],["land","🗺","Земля"],["cash","💰","Казна"],["bills","🧾","Счета"],["more","⋯","Ещё"]];
+const nav=()=>`<div class="nav">${TABS.map(([k,i,n])=>`<button class="${tab==k?"on":""}" onclick="A('tab','${k}')"><em>${i}</em>${n}</button>`).join("")}</div>`;
+function hud(dl){return`<div class="hud"><div class="top"><div class="pill day">День ${S.day} · <span id="clk"></span></div><button class="pill bl" onclick="A('tab','bills')">🧾 ${dl?dl+" дн.":"сегодня"} · −${sh(billEst(fc(),dl).reduce((a,b)=>a+b,0))}</button><div class="pill money${tab!="city"?" wb":""}"><small>${LV[S.lvl][0]} · ${D().e} ${D().n}</small><span id="mny">${fmt(S.money)}</span> ₽</div>${tab!="city"?`<button id="dbtn2" class="pill hday${S.run?" run":""}" ${S.run?"disabled":""} onclick="A('day')">${S.run?"⏳ День идёт":"▶️ Открыть день "+S.day}</button>`:""}</div><div class="bar"><i id="dp"></i></div></div>`}
+function billEst(f,dl){const n=dl+1,u=S.accU+f.upk*n;let lo=0;for(const l of S.loans)lo+=l.days_left<=n?l.left:Math.min(l.left,l.acc+l.per_day*n);return[Math.trunc(u),Math.trunc(lo)]}
+function render(){
+ if(!S){app.innerHTML=`<div class="card"><h2>Город с нуля</h2>Построй из деревни мегаполис. Выбери сложность и сюжет:</div>`+Object.entries(DF).map(([k,d])=>
+  `<button class="card item" style="width:100%" onclick="A('new','${k}')"><b>${d.e} ${d.n} · «${d.t}»</b><span>Старт: ${fmt(d.money)} ₽. ${d.story}<br>${d.perk}</span></button>`).join("");return}
+ const f=fc(),n=LV[S.lvl+1],dl=(BILL-S.day%BILL)%BILL;let h=hud(dl);
+ if(tab=="city"){
+  const run=S.run,l=S.last,z=v=>v||0;
+  h+=`<div class="art${cam?" cm":""}">${cam?camSVG():scene()}<div class="cmn">${CAMS[cam]}${cam==0||cam==4?" · "+STN[sel%STN.length]:""}</div><button class="cmv" style="left:6px" onclick="A('cam',(cam+4)%5)">◀</button><button class="cmv" style="right:6px" onclick="A('cam',(cam+1)%5)">▶</button><div id="bl">${BUB.map(b=>bHTML(b,(performance.now()-b.t0)/1000)).join("")}</div><div id="live" class="live">${run?"+"+fmt(S.dayInc*S.p)+" ₽":"☀️ Город ждёт — открой день"}</div></div>${camBar()}
+  <div class="ctl"><button id="dbtn" class="main${run?" run":""}" ${run?"disabled":""} onclick="A('day')">${run?"День идёт…":"▶️ Открыть день "+S.day}</button><div class="spd">${[1,2,4].map(v=>`<button class="${S.speed==v?"on":""}" onclick="A('spd',${v})">×${v}</button>`).join("")}</div></div>
+  <label class="chk"><input type="checkbox" ${S.auto?"checked":""} onchange="A('auto')"> Без остановок — дни идут подряд</label>`;
+  if(!l)h+=`<div class="card"><h2>Как играть</h2>Жми «Открыть день» — город проживёт день, а ты получишь итоги. Пока день идёт, тапай по 💰 над городом: это бонус. Между днями строй, меняй налоги и решай события.</div>`;
+  if(S.note)h+=`<div class="card note">${S.note.trim()}</div>`;
+  if(l){const tot=l.net+z(l.bon);h+=`<div class="card"><h2>Итоги дня ${l.day}</h2><div class="row"><span>🧾 Налоги</span><b class="good">+${fmt(l.tax)}</b></div><div class="row"><span>🏠 Аренда</span><b class="good">+${fmt(l.rent)}</b></div><div class="row"><span>🏪 Бизнес</span><b class="good">+${fmt(l.comm)}</b></div>${l.bon?`<div class="row"><span>💰 Бонусы за тапы</span><b class="good">+${fmt(l.bon)}</b></div>`:""}${l.int?`<div class="row"><span>💳 Проценты по долгу</span><b class="bad">−${fmt(l.int)}</b></div>`:""}<div class="row"><span>🔧 Содержание (в счёт)</span><b class="bad">−${fmt(z(l.upk))}</b></div>${l.loan?`<div class="row"><span>🏦 Кредиты (в счёт)</span><b class="bad">−${fmt(l.loan)}</b></div>`:""}${l.dpop?`<div class="row"><span>👥 Жители</span><b class="${l.dpop>0?"good":"bad"}">${l.dpop>0?"+":""}${l.dpop}</b></div>`:""}<div class="row tot"><span>Итого за день</span><b class="${tot>=0?"good":"bad"}">${tot>=0?"+":""}${fmt(tot)} ₽</b></div></div>`}
+  h+=tutCard()+hints(f)+elCard()+lifeCard()+goalCard();h+=`<div class="card"><div class="row"><span>👥 Жителей</span><b>${fmt(S.pop)} / жилья на ${fmt(f.cap)}</b></div>`+
+   (n?`<div class="bar"><i style="width:${Math.min(100,S.pop/n[1]*100)}%"></i></div><div class="mute">до «${n[0]}»: ${fmt(n[1])} жителей</div>`:"")+
+   `<div class="row"><span>😊 Настроение</span><b>${Math.trunc(f.h)}/100 · доходы ×${(.8+f.h/250).toFixed(2)}</b></div><div class="mute">Чем выше настроение, тем больше налогов, аренды и дохода бизнеса (от ×0,8 до ×1,2). Растёт от парков, школ, больниц и низкого налога.</div><div class="row"><span>🗺 Свободных участков</span><b>${S.plots}</b></div>
+   <div class="row"><span>📈 Прибыль в день</span><b class="${f.net>=0?"good":"bad"}">${f.net>=0?"+":""}${fmt(f.net)} ₽</b></div></div>`;
+ }else if(tab=="build"){
+  h+=qBar()+utilCard()+upgCard()+safeCard()+insCard()+`<div class="card"><h2>Стройка</h2><span class="mute">Каждое здание занимает участок. Свободно: ${S.plots}. Цена растёт с каждым зданием одного вида.</span></div><div class="grid">`+Object.entries(B).map(([k,b])=>{if(HID.has(k))return"";
+   if(S.lvl<b[3])return`<div class="card item lock"><b>🔒 ${b[1]}</b><span>с уровня «${LV[b[3]][0]}»</span></div>`;
+   if(NL.includes(k)&&!S.util.light)return`<div class="card item lock"><b>🔒 ${b[1]}</b><span>нужен свет ⚡</span></div>`;
+   const e=[];if(b[4])e.push("жильё +"+b[4]);if(b[5])e.push("аренда "+sh(b[5]));if(b[6])e.push("доход "+sh(b[6]));if(b[7])e.push("содерж. −"+sh(b[7]));if(b[8])e.push("настр. "+(b[8]>0?"+":"")+b[8]);
+   return`<button class="item" onclick="A('build','${k}')"><b>${b[0]} ${b[1]} ×${cnt(k)}</b><span>${e.join(", ")}</span><b data-q="b:${k}" class="${qCls(k)}">${qLab("b",k)}</b></button>`}).join("")+`</div>`;
+ }else if(tab=="land"){
+  const pm=S.pm;h+=streetCard();h+=`<div class="card"><h2>Участки</h2><div class="row"><span>Свободных</span><b>${S.plots}</b></div><div class="row"><span>Цена покупки</span><b>${fmt(pPrice())} ₽</b></div><div class="row"><span>Цена продажи</span><b>${fmt(pSell())} ₽</b></div><div class="row"><span>Рынок</span><b>${pm>1.2?"📈 дорого":pm<.8?"📉 дёшево":"➖ обычный"}</b></div><p class="mute">Покупай, когда дёшево, продавай, когда дорого — на этом тоже можно заработать.</p></div>
+  ${qBar()}<div class="grid"><button onclick="A('buy')" data-q="pb">${qLab("pb")}</button><button onclick="A('sell')" data-q="ps">${qLab("ps")}</button></div>`;
+ }else if(tab=="cash"){
+  const mx=Math.max(1,...S.hist.map(Math.abs));
+  h+=tarCard()+bankCard();h+=`<div class="card"><h2>Казна</h2><div class="row"><span>🧾 Налог ${S.tax}%</span><b>+${fmt(f.tax)}</b></div><div class="row"><span>🏠 Аренда</span><b>+${fmt(f.rent)}</b></div><div class="row"><span>🏪 Бизнес</span><b>+${fmt(f.comm)}</b></div>${f.int?`<div class="row"><span>💳 Проценты (казна в минусе)</span><b>−${fmt(f.int)}</b></div>`:""}<div class="row"><b>Доход в день</b><b class="good">+${fmt(f.rent+f.comm+f.tax-f.int)} ₽</b></div><div class="row mute"><span>Содержание города в день (платится раз в ${BILL} дней)</span><span>−${fmt(f.upk)}</span></div>
+  <p class="mute">Высокий налог — больше денег, но жители недовольны. Низкий — город растёт быстрее.</p><div class="tax">${[5,10,13,20,30].map(r=>`<button class="${r==S.tax?"on":""}" onclick="A('tax',${r})">${r}%</button>`).join("")}</div>
+  ${S.hist.length?`<div class="hist">${S.hist.slice(-10).map(x=>`<i class="${x<0?"n":""}" style="height:${Math.max(6,Math.abs(x)/mx*100)}%"></i>`).join("")}</div><div class="mute">Прибыль по дням (с учётом счетов)</div>`:""}</div>`;
+ }else if(tab=="bills"){
+  const[u,lo]=billEst(f,dl),n1=dl+1,ue=k=>Math.trunc(((S.accUt||{})[k]||0)+f.ut[k]*n1),us=ue("light")+ue("water")+ue("gas"),inc=(f.rent+f.comm+f.tax-f.int)*(dl+1),ok=S.money+inc>=u+lo;
+  h+=`<div class="card"><h2>🧾 Следующее списание</h2><div class="big">${dl?"через "+dl+" дн.":"сегодня в конце дня"}</div><span class="mute">Счета списываются автоматически раз в ${BILL} дней — в дни ${BILL}, ${BILL*2}, ${BILL*3}…</span>
+  <div class="row" style="margin-top:8px"><span>🔧 Содержание города</span><b>−${fmt(u-us)}</b></div>${["light","water","gas"].filter(k=>S.util[k]).map(k=>`<div class="row"><span>${UT[k][0]} ${UT[k][1]} (счёт за месяц)</span><b>−${fmt(ue(k))}</b></div>`).join("")}<div class="row"><span>🏦 Платежи по кредитам</span><b>−${fmt(lo)}</b></div><div class="row"><b>Итого примерно</b><b>−${fmt(u+lo)} ₽</b></div>
+  <p class="${ok?"good":"bad"}">${ok?"✅ Денег хватит":"⚠️ Денег может не хватить — копи или не трать. Просрочка: проценты и штраф 2% по кредиту"}</p></div>
+  <div class="card"><h2>🏦 Кредиты</h2><span class="mute">Банк платит сразу, а платежи входят в счёт. Досрочно — скидка 20% на проценты. Не больше двух сразу.</span>`+
+  S.loans.map((l,i)=>`<div class="row" style="margin-top:8px"><span>${l.name}: осталось ${fmt(l.left)} ₽ · ещё ${Math.max(0,l.days_left)} дн.</span></div><button style="width:100%" onclick="A('repay',${i})">Погасить за ${sh(early(l))} ₽</button>`).join("")+
+  `<div class="grid" style="margin-top:10px">`+LOANS.map(l=>{const t=l[3]+Math.trunc((l[4]-l[3])*D().lk);return S.lvl<l[2]?`<div class="card item lock"><b>🔒 ${l[1]}</b><span>с уровня «${LV[l[2]][0]}»</span></div>`:
+   `<button class="item" onclick="A('loan','${l[0]}')"><b>${l[1]}</b><span>+${sh(l[3])} → вернуть ${sh(t)} за ${l[5]} дн.</span></button>`}).join("")+
+  RL.map(r=>{const o=rOffer(r);return`<button class="item" onclick="A('loan','${r[0]}')"><b>${r[1]}</b><span>+${sh(o.take)} (+${o.pct}%) за ${r[2]} дн.</span></button>`}).join("")+`</div></div>
+  <div class="card"><h2>Прошлые списания</h2>${S.bills.length?S.bills.map(b=>`<div class="row"><span>День ${b.day}</span><span>содержание −${fmt(b.upk)} · кредиты −${fmt(b.loan)}</span></div>`).join(""):"Пока не было. Первое — в конце дня "+BILL+"."}</div>`;
+ }else{
+  h+=`<div class="card"><h2>Путь к мегаполису</h2>${LV.map((l,i)=>`<div class="row"><span>${i<=S.lvl?"✅":"⬜️"} ${l[0]}</span><span class="mute">${fmt(l[1])} жит.${l[2]?" · +"+sh(l[2]*D().rk):""}</span></div>`).join("")}</div>
+  ${moreCards()}<div class="card"><h2>📖 ${D().t}</h2>${D().story}<p class="mute">${D().perk}</p></div>
+  <div class="card"><h2>⏱ Время</h2>Ты сам открываешь каждый день. Один день идёт ${DAY} секунд, ×2 и ×4 ускоряют. «Без остановок» запускает следующий день автоматически. Пока открыто событие, время стоит.</div>
+  <div class="card"><h2>📜 Что случилось</h2>${S.log.length?[...S.log].reverse().map(([d,t])=>`<div class="row"><span><b>День ${d}</b> · ${t}</span></div>`).join(""):"Пока тихо."}</div>
+  <div class="card"><h2>💾 Сохранение</h2><div id="svs" class="mute">Автосохранение включено</div><p class="mute">Игра сохраняется сама каждые 10 секунд и при выходе: в облаке Telegram и на этом устройстве. Код нужен, чтобы перенести город в браузер или на другой аккаунт.</p><div class="grid"><button onclick="A('now')">💾 Сохранить</button><button onclick="A('exp')">📤 Скопировать код</button></div><button style="width:100%;margin-top:8px" onclick="A('imp')">📥 Загрузить по коду</button></div><button style="width:100%" onclick="A('reset')">🔄 Начать заново</button>`;
+ }
+ h+=nav();
+ if(S.event!==null){const[t,o]=EV[S.event];h+=`<div class="sheet"><div class="card"><h2>❗ Событие · время стоит</h2>${t}<div class="note" style="margin:8px 0">💡 <b>Аким советует:</b> ${advise(o).t}</div><div class="mute">😊 Настроение сейчас ${Math.trunc(hap())}/100. От него зависят доходы (×0,8…×1,2): ниже 40 жители не приезжают, ниже 25 — уезжают. Эффект решения слабеет примерно за 2 недели.</div>${o.map((x,i)=>`<button onclick="A('ev',${i})"${i==advise(o).i?' style="border-color:#e6a82c"':''}>${i==advise(o).i?"⭐ ":""}${x[0]}${x[3]>0&&S.pop>=capac()?" ⚠️ жилья нет — не приедут":""}<small class="ef">${effText(x)}</small></button>`).join("")}${S.later==null?'<button onclick="A(&quot;ev&quot;,&quot;later&quot;)">'+(o.some(x=>x[3]>0&&S.pop>=capac())?'⏳ Отложить: сначала построю дома':o.some(x=>x[1]<0&&S.money+x[1]<0)?'⏳ Отложить: сначала накоплю денег':'⏳ Подумать до завтра')+'</button><div class="mute" style="margin-top:4px">Событие вернётся завтра. Пока можно строить, покупать участки и копить деньги.</div>':""}</div></div>`}
+ h+=extraSheets();app.innerHTML=h;paint()}
+load(()=>{render();requestAnimationFrame(frame)});
+setInterval(()=>{if(S)save()},10000);addEventListener("pagehide",()=>{if(S)save(true)});document.addEventListener("visibilitychange",()=>{if(document.hidden&&S)save(true)});
+</script></body></html>
